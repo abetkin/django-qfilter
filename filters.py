@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from django.db.query import Q
 from functools import reduce
 """
 Created on Sun Apr 27 22:52:07 2014
@@ -48,7 +49,16 @@ class BaseFilter(object):
     
     def __call__(self, queryset):
         raise NotImplementedError()
-        
+    
+
+class ObjectFilter(BaseFilter):
+    
+    def filter__obj(self):
+        def filter_func(obj):
+            return 1
+        return filter_func
+    
+    
 class QFilter(BaseFilter):
     
     def __call__(self, queryset):
@@ -86,13 +96,8 @@ class FunctionFilter(BaseFilter):
     
     def __call__(self, queryset):
         filter_func = self.source
-        class FilteredQueryset(type(queryset)):
-            def iterate(self):
-                return (obj for obj in super(FilteredQueryset, self).iterator()
-                        if filter_func(obj))
-        qs = queryset.all()
-        qs.__class__ = FilteredQueryset
-        return qs
+
+        return self.queryset.all()
     
     def group():1
     
@@ -126,3 +131,24 @@ class QFilterBackend(object):
             name.startswith('by_') or
             name.startswith('filter__')
         )
+
+
+
+#
+# Mode: do not combine, apply one by one
+#
+
+class Example(QFilterBackend):
+    
+    def filter__obj(self, obj, fields=['name']):
+        if obj.name == 'stub':
+            return
+    
+    def filter__q(self):
+        def ids():
+            for obj in self.queryset.values('id', 'name'):
+                if obj['name'] == 'stub':
+                    continue
+                yield obj['id']
+        return Q(id__in=list(ids()))
+                    
