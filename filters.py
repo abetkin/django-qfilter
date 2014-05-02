@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-from django.db.models import Q, query
+
+import inspect
+import filter_types
 
 #%%
 
@@ -13,7 +15,7 @@ class self_is__dict__(dict):
         self.__dict__ = self
 
 
-class QuerysetFilter(object):
+class FilterSet(object):
 
     _method_name = None
     
@@ -45,124 +47,33 @@ class QuerysetFilter(object):
         method = getattr(self, self._method_name)
         return method(queryset)
 
+    @classmethod
+    def is_filter_method(cls, name):
+        return name.startswith('filter__')
 
-class FilterRunner(object):
-    '''
-    finds
+    @classmethod
+    def _find_methods(cls):
+        'return {method_name: method_info}'
+        def gen():
+            for name in dir(cls):
+                method = getattr(cls, name)
+                if not inspect.ismethod(method) or not cls.is_filter_method(name):
+                    continue
+                info = cls._collect_method_info(name)
+                yield name, info
+        return dict(gen())
+
+    @classmethod
+    def _collect_method_info(cls, method_name):
+        method = getattr(cls, method_name)
+        if hasattr(method, 'type'):
+            return {'class': cls.get_filter_class(method.type)}
+        return {'class': filter_types.SimpleQuerysetFilter}
     
-    run adapter (backend?)
-        create
-        combine
-    '''
-
-    def get_method_names(self, filter_class):
-        'return list(names)'
+    filter_types = {'queryset': filter_types.SimpleQuerysetFilter}
     
-    def combine_filters(self):
-        'return filter (callable)'
-        
-        '''
-        sort by type
-        apply op
-        '''
-
-#%%
-
-class SimpleQuerysetFilter(FilterInterface):
-    
-    filter_type = 'queryset'
-    
-    def __init__(self, callabl):
-        self.callable = callabl
-    
-    def __and__(self, other):
-        if other.filter_type == 'queryset':
-            return lambda queryset: self(queryset) & other(queryset)
-        return NotImplemented
-        
-    def __or__(self, other):
-        if other.filter_type == 'queryset':
-            return lambda queryset: self(queryset) | other(queryset)
-        return NotImplemented
-    
-    def __call__(self, queryset):
-        return_value = self.callable(queryset)
-        return self.queryset
-            
-
-class QFilter(FilterInterface):
-    
-    def __init__(self, q_expr):
-        self.q_expr = q_expr
-    
-    def __call__(self, queryset):
-        return queryset.filter(self.q_expr)
-
-
-class QuerysetIterationHook(FilterInterface):
-    
-    def __init__(self, hook_function):
-        self.hook_function = hook_function
-    
-    def __call__(self, queryset):
-        class QuerysetWrapper(type(queryset)):
-            def iterator(this):
-                for obj in super(QuerysetWrapper, this).iterator():
-                    new_obj = self.hook_function(obj)
-                    if new_obj is not None:
-                        yield new_obj
-        queryset.__class__ = QuerysetWrapper
-        return queryset
-
-class ValuesDictFilter(FilterInterface):
-    
-    def __init__(self, field_list, filter_func):
-        self.filter_func = filter_func
-        self.field_list = field_list
-    
-    def __call__(self, queryset):
-        field_list = ['pk'] + self.field_list
-        objects = queryset.values(*field_list)
-        pks = [obj['pk'] for obj in objects
-                         if self.filter_func(obj)]
-        return queryset.filter(pk__in=pks)
-
-#%%
-'test QFilter'
-
-q_filter = QFilter(Q(id=11949))
-qs = queryset = BankCompany.objects.all()
-q_filter(qs)
-
-#%%
-'test SimpleQuerysetFilter'
-
-qs = BankCompany.objects.filter(id=11949)
-qsfilter = SimpleQuerysetFilter(qs)
-qsfilter(qs)
-
-#%%
-'test ValuesDictFilter'
-
-values_filter = ValuesDictFilter([], lambda obj: obj['pk']==11949)
-values_filter(queryset)
-#%%
-'test QuerysetIterationHook'
-
-qs = BankCompany.objects.all()[:5]
-def hook_func(obj):
-    print obj.pk
-    return obj
-
-iter_hook = QuerysetIterationHook(hook_func)
-nu = iter_hook(qs)
-nu
-
-#%%
-
-def factory(typ, method, context):
-    '''
-    Q type is default
-    '''
-    
+    @classmethod
+    def get_filter_class(cls, filter_type):
+        return cls.filter_types.get(filter_type) 
+#
 
