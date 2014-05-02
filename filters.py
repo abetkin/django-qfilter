@@ -1,35 +1,96 @@
 # -*- coding: utf-8 -*-
-from django.db.models import Q
+from django.db.models import Q, query
 
 #%%
-    
+
+"""
+Filter is a callable that returns queryset
+"""
+
+class self_is__dict__(dict):
+    def __init__(self, *args, **kw):
+        super(self_is__dict__, self).__init__(*args, **kw)
+        self.__dict__ = self
+
+
 class QuerysetFilter(object):
-    #TODO construct method call
 
-    context = {}
+    _method_name = None
     
-    def __call__(self, queryset):
-        return queryset
+    filter_type = None # filter type is taken into account when combining filters
+    context = None
     
-#    def __and__(self, other):
-#        if isinstance(other, QuerysetFilter):
-#            return QuerysetFilter(source=self.source & other.source)
-#        elif isinstance(other, Q):
-#            'other.'
-#        return NotImplemented
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+        self.context = self.get_context()
+    
+    @property
+    def context(self):
+        return self._context
+    
+    @context.setter
+    def context(self, dic):
+        assert isinstance(dic, dict), 'context should be a dict'
+        self._context = self_is__dict__(dic)
+    
+    def get_context(self):
+        'for overriding'
+        return self.context
+    
+    def run_filter(self, context=None):
+        '''return queryset
+        '''
+        self.context.update(context)
+        #FIXME construct filter from method
+        method = getattr(self, self._method_name)
+        return method(queryset)
+
+
+class FilterRunner(object):
+    '''
+    finds
+    
+    run adapter (backend?)
+        create
+        combine
+    '''
+
+    def get_method_names(self, filter_class):
+        'return list(names)'
+    
+    def combine_filters(self):
+        'return filter (callable)'
+        
+        '''
+        sort by type
+        apply op
+        '''
 
 #%%
 
-class SimpleQuerysetFilter(QuerysetFilter):
+class SimpleQuerysetFilter(FilterInterface):
     
-    def __init__(self, queryset):
-        self.queryset = queryset
+    filter_type = 'queryset'
+    
+    def __init__(self, callabl):
+        self.callable = callabl
+    
+    def __and__(self, other):
+        if other.filter_type == 'queryset':
+            return lambda queryset: self(queryset) & other(queryset)
+        return NotImplemented
+        
+    def __or__(self, other):
+        if other.filter_type == 'queryset':
+            return lambda queryset: self(queryset) | other(queryset)
+        return NotImplemented
     
     def __call__(self, queryset):
-        # ignore `queryset`
+        return_value = self.callable(queryset)
         return self.queryset
+            
 
-class QFilter(QuerysetFilter):
+class QFilter(FilterInterface):
     
     def __init__(self, q_expr):
         self.q_expr = q_expr
@@ -38,7 +99,7 @@ class QFilter(QuerysetFilter):
         return queryset.filter(self.q_expr)
 
 
-class QuerysetIterationHook(QuerysetFilter):
+class QuerysetIterationHook(FilterInterface):
     
     def __init__(self, hook_function):
         self.hook_function = hook_function
@@ -53,7 +114,7 @@ class QuerysetIterationHook(QuerysetFilter):
         queryset.__class__ = QuerysetWrapper
         return queryset
 
-class ValuesDictFilter(QuerysetFilter):
+class ValuesDictFilter(FilterInterface):
     
     def __init__(self, field_list, filter_func):
         self.filter_func = filter_func
