@@ -39,13 +39,20 @@ class FilterSet(object):
         'for overriding'
         return self.context
     
-    def run_filter(self, context=None):
-        '''return queryset
-        '''
-        self.context.update(context)
-        #FIXME construct filter from method
-        method = getattr(self, self._method_name)
-        return method(queryset)
+    def __iter__(self):
+        'depends on grouping setting'
+
+    def as_filter(self):
+        def callabl(queryset):
+            method = getattr(self, self._method_name)
+            self.context.queryset = queryset
+            return method()
+        klass = self._dispatch(self._method_name)
+        return klass(callabl)
+
+    @classmethod
+    def _dispatch(cls, method_name):
+        return 'filter class'
 
     @classmethod
     def is_filter_method(cls, name):

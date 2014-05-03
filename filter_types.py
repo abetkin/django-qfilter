@@ -4,7 +4,7 @@ from django.db.models import Q, query
 
 #%%
 
-class SimpleQuerysetFilter(object):
+class QFilter(object):
     
     filter_type = 'queryset'
     
@@ -22,24 +22,19 @@ class SimpleQuerysetFilter(object):
         return NotImplemented
     
     def __call__(self, queryset):
-        #TODO
         return_value = self.callable(queryset)
-        return self.queryset
-            
-
-class QFilter(object):
-    
-    def __init__(self, q_expr):
-        self.q_expr = q_expr
-    
-    def __call__(self, queryset):
-        return queryset.filter(self.q_expr)
+        if isinstance(return_value, Q):
+            return queryset.filter(return_value)
+        assert isinstance(return_value, query.QuerySet)
+        return return_value
 
 
 class QuerysetIterationHook(object):
     
     def __init__(self, hook_function):
         self.hook_function = hook_function
+    
+    #TODO add id filter to make queryset consistent with the objects it returns
     
     def __call__(self, queryset):
         class QuerysetWrapper(type(queryset)):
@@ -50,6 +45,7 @@ class QuerysetIterationHook(object):
                         yield new_obj
         queryset.__class__ = QuerysetWrapper
         return queryset
+
 
 class ValuesDictFilter(object):
     
@@ -64,6 +60,16 @@ class ValuesDictFilter(object):
                          if self.filter_func(obj)]
         return queryset.filter(pk__in=pks)
 
+class ValuesFilterType(type):
+    def __init__(self, *args, **kw):
+        'set field_list'
+
+#%%
+
+@SimpleQuerysetFilter # -> QFilter
+def my_filter(queryset):
+    1
+
 ##%%
 #'test QFilter'
 #
@@ -71,14 +77,14 @@ class ValuesDictFilter(object):
 #qs = queryset = BankCompany.objects.all()
 #q_filter(qs)
 #
-##%%
-#'test SimpleQuerysetFilter'
-#
-#qs = BankCompany.objects.filter(id=11949)
-#qsfilter = SimpleQuerysetFilter(qs)
-#qsfilter(qs)
-#
-##%%
+#%%
+'test SimpleQuerysetFilter'
+
+qs = BankCompany.objects.filter(id=11949)
+qsfilter = SimpleQuerysetFilter(qs)
+qsfilter(qs)
+
+#%%
 #'test ValuesDictFilter'
 #
 #values_filter = ValuesDictFilter([], lambda obj: obj['pk']==11949)
@@ -95,4 +101,4 @@ class ValuesDictFilter(object):
 #nu = iter_hook(qs)
 #nu
 #
-##%%
+#%%
