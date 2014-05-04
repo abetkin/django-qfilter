@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import ipdb
 from django.db.models import Q, query
-
+import operator
 #%%
 
 class QuerySetFilter(object):
@@ -30,7 +30,7 @@ class QFilter(QuerySetFilter):
         return return_value
 
 
-class QuerysetIterationHook(object):
+class QuerysetIterationHook(QuerySetFilter):
     
     def __init__(self, hook_function):
         self.hook_function = hook_function
@@ -46,7 +46,20 @@ class QuerysetIterationHook(object):
 
 #%%
 
-class ValuesDictFilter(object):
+class CallablesList(list):
+    
+    def __init__(self, *args, **kw):
+        self.operation = kw.pop('operation', lambda x,y: None)
+        super(CallablesList, self).__init__(*args, **kw)
+    
+    def __call__(self, *args, **kw):
+        results = [f(*args, **kw) for f in self]
+        results = reversed(results) # make it queue not stack
+        return reduce(self.operation, results)
+
+#%%
+
+class ValuesDictFilter(QuerySetFilter):
     
     def __new__(cls, *args, **kw):
         if not args and kw.keys() == ['fields_list']:
@@ -61,7 +74,30 @@ class ValuesDictFilter(object):
     def __init__(self, filter_func, fields_list=None):
         self.filter_func = filter_func
         if fields_list:
-            self.fields_list = fields_list
+            self.fields_list = list(fields_list)
+    
+    def _apply(self, other, operation):
+        assert isinstance(other, ValuesDictFilter)
+        def list_callables():
+            for callabl in (self.filter_func, other.filter_func):
+                try:
+                    for f in callabl:
+                        yield f
+                except TypeError:
+                    yield callabl
+        filter_func = CallablesList(list_callables(), operation=operation)
+        return self.__class__(filter_func=filter_func,
+                              fields_list=self.fields_list + other.fields_list)
+    
+    def __and__(self, other):
+        if isinstance(other, ValuesDictFilter):
+            return self._apply(other, operation=lambda x, y: x and y)
+        return super(ValuesDictFilter, self).__and__(other)
+    
+    def __or__(self, other):
+        if isinstance(other, ValuesDictFilter):
+            return self._apply(other, operation=lambda x, y: x or y)
+        return super(ValuesDictFilter, self).__or__(other)
     
     def __call__(self, queryset):
         fields_list = ['pk'] + self.fields_list
@@ -71,16 +107,46 @@ class ValuesDictFilter(object):
         return queryset.filter(pk__in=pks)
 
 #%%
+
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
+
+#%%
+
 #with ipdb.launch_ipdb_on_exception():
 @ValuesDictFilter(fields_list=[])
 def filtr(obj):
     return obj['pk'] == 11978
 
-#%%
-from unicom.crm.models import BankCompany
-filtr(BankCompany.objects.all())
+@ValuesDictFilter(fields_list=['region_list__city_type'])
+def fname(obj):
+    return obj['region_list__city_type']
+#    return obj['company_name'] in (u'Альфа-Банк', u'Абсолют Банк', u'Авангард')
+
 
 #%%
+import operator
+from unicom.crm.models import BankCompany
+f = filtr | fname
+f
+
+#%%
+#BankCompany.objects.get(pk=11978).company_name
+qs = f(BankCompany.objects.all())
+qs.count()
+
+#%%
+
+@QuerysetIterationHook
+def set_hvost(obj):
+    obj.hvost = 30
+
+qs = set_hvost(BankCompany.objects.filter(id=11978))
+qs[0].hvost
+#%%
+
+#%%
+
 'Init project'
 
 import os
