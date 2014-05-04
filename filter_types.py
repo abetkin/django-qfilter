@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
-
+import ipdb
 from django.db.models import Q, query
 
 #%%
 
-class QFilter(object):
-    
-    filter_type = 'queryset'
-    
-    def __init__(self, callabl):
-        self.callable = callabl
+class QuerySetFilter(object):
     
     def __and__(self, other):
-        if other.filter_type == 'queryset':
+        if isinstance(other, QuerySetFilter):
             return lambda queryset: self(queryset) & other(queryset)
         return NotImplemented
         
     def __or__(self, other):
-        if other.filter_type == 'queryset':
+        if isinstance(other, QuerySetFilter):
             return lambda queryset: self(queryset) | other(queryset)
-        return NotImplemented
+        return NotImplemented    
+
+
+class QFilter(QuerySetFilter):
+
+    def __init__(self, callabl):
+        self.callable = callabl
     
     def __call__(self, queryset):
         return_value = self.callable(queryset)
@@ -34,41 +35,72 @@ class QuerysetIterationHook(object):
     def __init__(self, hook_function):
         self.hook_function = hook_function
     
-    #TODO add id filter to make queryset consistent with the objects it returns
-    
     def __call__(self, queryset):
         class QuerysetWrapper(type(queryset)):
             def iterator(this):
                 for obj in super(QuerysetWrapper, this).iterator():
-                    new_obj = self.hook_function(obj)
-                    if new_obj is not None:
-                        yield new_obj
+                    self.hook_function(obj) #TODO: maybe let it throw exception
+                    yield obj
         queryset.__class__ = QuerysetWrapper
         return queryset
 
+#%%
 
 class ValuesDictFilter(object):
     
-    def __init__(self, field_list, filter_func):
+    def __new__(cls, *args, **kw):
+        if not args and kw.keys() == ['fields_list']:
+            # this is reserved for using class as decorator
+            def newobj(*fargs, **fkw):
+                obj = cls(*fargs, **fkw)
+                obj.fields_list = kw['fields_list']
+                return obj
+            return newobj
+        return super(ValuesDictFilter, cls).__new__(cls, *args, **kw)
+    
+    def __init__(self, filter_func, fields_list=None):
         self.filter_func = filter_func
-        self.field_list = field_list
+        if fields_list:
+            self.fields_list = fields_list
     
     def __call__(self, queryset):
-        field_list = ['pk'] + self.field_list
-        objects = queryset.values(*field_list)
+        fields_list = ['pk'] + self.fields_list
+        objects = queryset.values(*fields_list)
         pks = [obj['pk'] for obj in objects
                          if self.filter_func(obj)]
         return queryset.filter(pk__in=pks)
 
-class ValuesFilterType(type):
-    def __init__(self, *args, **kw):
-        'set field_list'
+#%%
+#with ipdb.launch_ipdb_on_exception():
+@ValuesDictFilter(fields_list=[])
+def filtr(obj):
+    return obj['pk'] == 11978
+
+#%%
+from unicom.crm.models import BankCompany
+filtr(BankCompany.objects.all())
+
+#%%
+'Init project'
+
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
+
+from django.db.models import Q
 
 #%%
 
-@SimpleQuerysetFilter # -> QFilter
+@QFilter
 def my_filter(queryset):
-    1
+    return BankCompany.objects.filter(id__in=(11949, 11978))
+
+@QFilter
+def filtr(qs):
+    return Q(id=11978)
+
+#%%
+
+(my_filter & filtr)(BankCompany.objects.all())
 
 ##%%
 #'test QFilter'

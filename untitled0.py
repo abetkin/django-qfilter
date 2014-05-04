@@ -2,15 +2,7 @@
 
 #%%
 
-import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
 
-#%%
-from django.db.models import Q
-#%%
-
-from unicom.crm.models import BankCompany
-BankCompany.objects.all()[0].pk
 
 #%%
 
@@ -33,3 +25,5 @@ class A(object):
 a = A()
 a.context = {'at': 4}
 #%%
+
+{1: 1}.keys()
