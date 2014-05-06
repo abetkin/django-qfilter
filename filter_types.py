@@ -24,6 +24,10 @@ class QuerySetFilter(object):
         return NotImplemented    
 
 
+class ContainerMixin(object):
+    def __init__(self):
+        'singledispatch'
+
 class QFilter(QuerySetFilter):
 
     def __init__(self, callabl):

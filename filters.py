@@ -17,19 +17,22 @@ class self_is__dict__(dict):
 
 class FiltersContainer(object):
 
-    _context = {}
-    
-    _filter = None
-    
 #    def __init__(self, **kwargs):
 #        self.__dict__.update(kwargs)
 #        self.context = self.get_context()
+
+
+
+    '''
+    Assume we use method markers, smth. like
+    ...
+    '''
+
+    ## context attribute
+
+    _context = {}
+
     
-    
-    def __init__(self, method_name):
-        classes = (self.__class__, 'choose')
-    
-    ## small trick for convenience
     @property
     def context(self):
         return self._context
@@ -39,24 +42,17 @@ class FiltersContainer(object):
         assert isinstance(dic, dict), 'context should be a dict'
         self._context = self_is__dict__(dic)
     
-    ##
-    
-    #TODO: make instance for each filter
-    
     def get_context(self):
         'for overriding'
         return self.context
+        
+    ##
+        
+    def __init__(self, method_name, filter_class):
+        pass
 
-    '''
-    Assume we use method markers, smth. like
-    ...
-    '''
-    
-    def _add_queryset_arg(self, method):
-        def callabl(queryset):
-            self.context.queryset = queryset
-            return method()
-        return callabl
+#    def filter_factory(cls, )
+
 
     def make_filter(self, callabl):
         '''
@@ -68,6 +64,8 @@ class FiltersContainer(object):
         1
     
     ## Filter interface
+    
+    _filter = None
 
     def __call__(self, queryset):
         return self._filter(queryset)
@@ -92,12 +90,27 @@ class FiltersContainer(object):
             return inspect.ismethod(method) and cls.is_filter_method(name)
         return filter(filter_func, attrs)
 
-#
+#%%
 
+from functools import singledispatch
 
+#%%
+
+#XXX enum?
+
+## Filter factories
+
+@singledispatch
+def make_filter(klass, method):
+    pass
+
+@make_filter.register(filter_types.QFilter)
+def make_qfilter(klass, method):
+    1
 
 '''
 __new__:
+    class (ContainerMixin, Filter)
     new instance from method_name
     -> new filter instance
     inst1.__class__ = 1
