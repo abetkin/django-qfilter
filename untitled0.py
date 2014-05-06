@@ -1,29 +1,27 @@
 # -*- coding: utf-8 -*-
-
+import abc
 #%%
-
-
-
-#%%
-
-class as_object(dict):
-    def __init__(self, *args, **kw):
-        super(as_object, self).__init__(*args, **kw)
-        self.__dict__ = self
 
 class A(object):
     
-    @property
-    def context(self):
-        return self._context
+    __metaclass__ = abc.ABCMeta
     
-    @context.setter
-    def context(self, dic):
-        assert isinstance(dic, dict)
-        self._context = as_object(dic)
-        
-a = A()
-a.context = {'at': 4}
+    def __init__(self):
+        self.a = 1
+    
+
+class B(A):
+    def f(self):
+        return 1
+    
+class C(object):
+    def f(self):
+        return 'c'
+
+#%%
+c.f()
 #%%
 
-{1: 1}.keys()
+c = C()
+b = B()
+B.register(C)

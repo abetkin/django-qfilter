@@ -19,9 +19,15 @@ class FiltersContainer(object):
 
     _context = {}
     
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-        self.context = self.get_context()
+    _filter = None
+    
+#    def __init__(self, **kwargs):
+#        self.__dict__.update(kwargs)
+#        self.context = self.get_context()
+    
+    
+    def __init__(self, method_name):
+        classes = (self.__class__, 'choose')
     
     ## small trick for convenience
     @property
@@ -54,27 +60,25 @@ class FiltersContainer(object):
 
     def make_filter(self, callabl):
         '''
-        `method` is an instance method made to accept queryset argument
+        new instance of (FiltersContainer, <resp. filter>)
         '''
-        marker_args = method.marker_args
-        marker_kwargs = method.marker_kwargs
-        
-        if marker_args and marker_args[0] == 'filter_function':
-            return lambda self: None
-        return filter_types.QFilter
-        
+    
+
     def make_callable(self, method):
         1
+    
+    ## Filter interface
 
+    def __call__(self, queryset):
+        return self._filter(queryset)
+    
+    def __and__(self, other):
+        return self._filter & other
+    
+    def __or__(self, other):
+        return self._filter | other
 
-#    @classmethod
-#    def get_filter_class(cls, method_marker):
-#        '''Method markers are strings in the simplest case.'''
-#        if method_marker == 'filter function':
-#            return filter_types.ValuesDictFilter
-#        if method_marker == 'iteration hook':
-#            return filter_types.QuerysetIterationHook
-#        return filter_types.QFilter
+    ##
 
     @classmethod
     def is_filter_method(cls, name):
@@ -90,3 +94,14 @@ class FiltersContainer(object):
 
 #
 
+
+
+'''
+__new__:
+    new instance from method_name
+    -> new filter instance
+    inst1.__class__ = 1
+    register as filter class
+    return inst1
+
+'''
