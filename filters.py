@@ -110,13 +110,15 @@ def make_qfilter(klass, method):
 
 '''
 __new__:
-    class (ContainerMixin, Filter)
     new instance from method_name
     -> new filter instance
     inst1.__class__ = 1
     register as filter class
     return inst1
 
+-------
+contxt_obj registers itself as a filter it wants to be
+than is called to_filter(context_obj) dispatching on the registered class.
 
 
 '''
