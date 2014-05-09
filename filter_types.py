@@ -24,10 +24,6 @@ class QuerySetFilter(object):
         return NotImplemented    
 
 
-class ContainerMixin(object):
-    def __init__(self):
-        'singledispatch'
-
 class QFilter(QuerySetFilter):
 
     def __init__(self, callabl):
@@ -154,89 +150,89 @@ class ValuesDictFilter(QuerySetFilter):
         return queryset.filter(pk__in=pks)
 
 #%%
-
-import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
-
-#%%
-
-#with ipdb.launch_ipdb_on_exception():
-@ValuesDictFilter(fields_list=[])
-def filtr(obj):
-    return obj['pk'] == 11978
-
-@ValuesDictFilter(fields_list=['region_list__city_type'])
-def fname(obj):
-    return obj['region_list__city_type']
-#    return obj['company_name'] in (u'Альфа-Банк', u'Абсолют Банк', u'Авангард')
-
-
-#%%
-import operator
-from unicom.crm.models import BankCompany
-f = filtr & fname
-f
-
-#%%
-#BankCompany.objects.get(pk=11978).company_name
-qs = f(BankCompany.objects.all())
-qs.count()
-
-#%%
-
-@QuerysetIterationHook
-def set_hvost(obj):
-    obj.hvost = 30
-
-@QuerysetIterationHook
-def set_color(obj):
-    obj.color = 'grey'
-
-f = set_color | set_hvost
-
-#%%
-
-qs = f(BankCompany.objects.filter(id=11978))
-qs[0].color + ' ' + str(qs[0].hvost)
-#%%
-
-#%%
-
-'Init project'
-
-import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
-
-from django.db.models import Q
-
-#%%
-
-@QFilter
-def my_filter(queryset):
-    return BankCompany.objects.filter(id__in=(11949, 11978))
-
-@QFilter
-def filtr(qs):
-    return Q(id=11978)
-
-#%%
-
-(my_filter & filtr)(BankCompany.objects.all())
-
+#
+#import os
+#os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
+#
 ##%%
-#'test QFilter'
 #
-#q_filter = QFilter(Q(id=11949))
-#qs = queryset = BankCompany.objects.all()
-#q_filter(qs)
+##with ipdb.launch_ipdb_on_exception():
+#@ValuesDictFilter(fields_list=[])
+#def filtr(obj):
+#    return obj['pk'] == 11978
 #
-#%%
-'test SimpleQuerysetFilter'
-
-qs = BankCompany.objects.filter(id=11949)
-qsfilter = SimpleQuerysetFilter(qs)
-qsfilter(qs)
-
+#@ValuesDictFilter(fields_list=['region_list__city_type'])
+#def fname(obj):
+#    return obj['region_list__city_type']
+##    return obj['company_name'] in (u'Альфа-Банк', u'Абсолют Банк', u'Авангард')
+#
+#
+##%%
+#import operator
+#from unicom.crm.models import BankCompany
+#f = filtr & fname
+#f
+#
+##%%
+##BankCompany.objects.get(pk=11978).company_name
+#qs = f(BankCompany.objects.all())
+#qs.count()
+#
+##%%
+#
+#@QuerysetIterationHook
+#def set_hvost(obj):
+#    obj.hvost = 30
+#
+#@QuerysetIterationHook
+#def set_color(obj):
+#    obj.color = 'grey'
+#
+#f = set_color | set_hvost
+#
+##%%
+#
+#qs = f(BankCompany.objects.filter(id=11978))
+#qs[0].color + ' ' + str(qs[0].hvost)
+##%%
+#
+##%%
+#
+#'Init project'
+#
+#import os
+#os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
+#
+#from django.db.models import Q
+#
+##%%
+#
+#@QFilter
+#def my_filter(queryset):
+#    return BankCompany.objects.filter(id__in=(11949, 11978))
+#
+#@QFilter
+#def filtr(qs):
+#    return Q(id=11978)
+#
+##%%
+#
+#(my_filter & filtr)(BankCompany.objects.all())
+#
+###%%
+##'test QFilter'
+##
+##q_filter = QFilter(Q(id=11949))
+##qs = queryset = BankCompany.objects.all()
+##q_filter(qs)
+##
+##%%
+#'test SimpleQuerysetFilter'
+#
+#qs = BankCompany.objects.filter(id=11949)
+#qsfilter = SimpleQuerysetFilter(qs)
+#qsfilter(qs)
+#
 #%%
 #'test ValuesDictFilter'
 #

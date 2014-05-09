@@ -2,70 +2,43 @@
 
 import inspect
 import filter_types
-
-#%%
-
-"""
-Filter is a callable that returns queryset
-"""
-
-class self_is__dict__(dict):
-    def __init__(self, *args, **kw):
-        super(self_is__dict__, self).__init__(*args, **kw)
-        self.__dict__ = self
+import filter_factory
 
 
-class FiltersContainer(object):
-
-#    def __init__(self, **kwargs):
-#        self.__dict__.update(kwargs)
-#        self.context = self.get_context()
-
-
-
+def make_filter(*args, **kwargs):
     '''
-    Assume we use method markers, smth. like
-    ...
+    Decorator for `FilterContainer` filtering methods.
     '''
+    def decor(func):
+        func.make_filter_args = args
+        func.make_filter_kwargs = kwargs
+        return func
+    return decor
 
-    ## context attribute
 
-    _context = {}
+class FilterContainer(object):
 
-    
-    @property
-    def context(self):
-        return self._context
-    
-    @context.setter
-    def context(self, dic):
-        assert isinstance(dic, dict), 'context should be a dict'
-        self._context = self_is__dict__(dic)
-    
-    def get_context(self):
-        'for overriding'
-        return self.context
-        
     ##
-        
-    def __init__(self, method_name, filter_class):
-        pass
-
-#    def filter_factory(cls, )
-
-
-    def make_filter(self, callabl):
-        '''
-        new instance of (FiltersContainer, <resp. filter>)
-        '''
     
+#    @property
+#    def queryset(self):
+#        return self.context['queryset']
 
-    def make_callable(self, method):
-        1
-    
-    ## Filter interface
-    
-    _filter = None
+
+    def __init__(self, context={}, *args, **kw):
+        if 'method_name' not in kw:
+            self._init_all(context, *args, **kw)
+        self._filter = None
+        self.method_name = kw['method_name']
+        self.context = context
+        filter_class, *make_filter_args = get(self, kw['method_name']).make_filter_args
+        make_filter_kwargs = get(self, kw['method_name']).make_filter_kwargs
+        filter_class.register(self)
+        self._filter = filter_factory.make_filter(filter_class,
+                                                  *make_filter_args,
+                                                  **make_filter_kwargs)
+
+    ## Delegate filtering to _filter
 
     def __call__(self, queryset):
         return self._filter(queryset)
@@ -77,7 +50,22 @@ class FiltersContainer(object):
         return self._filter | other
 
     ##
-
+    
+    def __repr__(self):
+        return '%s (%s)' % (self.method_name, self._filter.__class__)
+    
+    def _init_all(self, context, *args, **kw):
+        self._filters = []
+        for method_name in self._get_methods_names():
+            self._filters.append(
+                    self.__class__(context, *args, method_name=method_name, **kw))
+    
+    def __iter__(self):
+        try:
+            return iter(self._filters)
+        except AttributeError:
+            raise Exception('Not a filter container')
+    
     @classmethod
     def is_filter_method(cls, name):
         return name.startswith('filter__')
@@ -85,41 +73,13 @@ class FiltersContainer(object):
     @classmethod
     def _get_methods_names(cls):
         attrs = dir(cls)
-        def filter_func(name):
-            method = getattr(cls, name)
-            return inspect.ismethod(method) and cls.is_filter_method(name)
-        return filter(filter_func, attrs)
+        return filter(lambda name: inspect.ismethod(getattr(cls, name))
+                                   and cls.is_filter_method(name),
+                      attrs)
 
 #%%
-
-from functools import singledispatch
-
-#%%
-
-#XXX enum?
-
-## Filter factories
-
-@singledispatch
-def make_filter(klass, method):
-    pass
-
-@make_filter.register(filter_types.QFilter)
-def make_qfilter(klass, method):
+class A:
     1
-
-'''
-__new__:
-    new instance from method_name
-    -> new filter instance
-    inst1.__class__ = 1
-    register as filter class
-    return inst1
-
--------
-contxt_obj registers itself as a filter it wants to be
-than is called to_filter(context_obj) dispatching on the registered class.
-
-
-'''
-
+o = A()
+o
+#%%
