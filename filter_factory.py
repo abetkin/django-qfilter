@@ -17,8 +17,7 @@ from functools import singledispatch
 
 @singledispatch
 def make_filter(instance, *args, **kw):
-    default = make_filter.dispatch(filter_types.QFilter)
-    return default(instance, *args, **kw)
+    raise NotImplementedError()
 
 @make_filter.register(filter_types.QFilter)
 def _(instance):

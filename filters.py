@@ -15,7 +15,7 @@ def make_filter(*args, **kwargs):
         return func
     return decor
 
-
+#%%
 class FilterContainer(object):
 
     ##
@@ -28,11 +28,15 @@ class FilterContainer(object):
     def __init__(self, context={}, *args, **kw):
         if 'method_name' not in kw:
             self._init_all(context, *args, **kw)
+            return
         self._filter = None
         self.method_name = kw['method_name']
         self.context = context
-        filter_class, *make_filter_args = get(self, kw['method_name']).make_filter_args
-        make_filter_kwargs = get(self, kw['method_name']).make_filter_kwargs
+        method = getattr(self, kw['method_name'])
+        default_filter_class = filter_types.QFilter
+        filter_class, *make_filter_args = getattr(method, 'make_filter_args',
+                                                  (default_filter_class,))
+        make_filter_kwargs = getattr(method, 'make_filter_kwargs', {})
         filter_class.register(self)
         self._filter = filter_factory.make_filter(filter_class,
                                                   *make_filter_args,
@@ -73,13 +77,38 @@ class FilterContainer(object):
     @classmethod
     def _get_methods_names(cls):
         attrs = dir(cls)
-        return filter(lambda name: inspect.ismethod(getattr(cls, name))
-                                   and cls.is_filter_method(name),
+        return filter(lambda name: cls.is_filter_method(name),
                       attrs)
+#%%
+#import os
+#os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hvost.settings")
+#import django
+#django.setup()
+##%%
+#from qfilters.models import Luck
+#Luck.objects.filter(value=1)
+#%%
+
+class MyFilters(FilterContainer):
+    
+    def filter__method(self):
+        return Q(value=1)
 
 #%%
-class A:
-    1
-o = A()
-o
+filters = MyFilters()
 #%%
+#inspect.ismemberdescriptor(getattr(MyFilters, 'filter__method'))
+for s in dir(inspect):
+    if 'method' in s: print(s)
+#%%
+#%%
+
+
+
+
+
+
+
+
+
+

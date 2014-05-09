@@ -5,7 +5,7 @@ from django.db.models import Q, query
 import operator
 #%%
 
-class QuerySetFilter(object):
+class QuerySetFilter:
     '''
     An instance is a QuerySet filter if instance(queryset) returns a queryset.
     Filter class also defines operations with other querysets.
