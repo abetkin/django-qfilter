@@ -11,14 +11,13 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'hvost.settings'
 import django
 from django.db.models import Q
 #%%
-import filter_types
-import filters
-from filters import make_filter
+import containers, filters
+from dec import make_filter
 #%%
 
-class MyFilters(filters.FilterContainer):
+class MyFilters(containers.MethodFilter):
     
-    @make_filter(filter_types.ValuesDictFilter, fields_list=['value'])
+    @make_filter(filters.ValuesDictFilter, fields_list=['value'])
     def filter__method(self, obj):
         return obj['value'] == 1
 #%%
