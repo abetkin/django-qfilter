@@ -5,14 +5,12 @@ from django.db.models import Q, query
 import operator
 #%%
 
-class QuerySetFilter:
+class QuerySetFilter(object):
     '''
     An instance is a QuerySet filter if instance(queryset) returns a queryset.
     Filter class also defines operations with other querysets.
     '''
-    
-    __metaclass__ = ABCMeta # to be able to register classes as filters
-    
+
     def __and__(self, other):
         if isinstance(other, QuerySetFilter):
             return lambda queryset: self(queryset) & other(queryset)

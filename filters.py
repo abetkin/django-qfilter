@@ -3,6 +3,10 @@
 import inspect
 import filter_types
 import filter_factory
+import operator
+
+
+from django.db.models import Q, query
 
 
 def make_filter(*args, **kwargs):
@@ -18,6 +22,7 @@ def make_filter(*args, **kwargs):
 #%%
 class FilterContainer(object):
 
+    combine = operator.and_
     ##
     
 #    @property
@@ -34,13 +39,12 @@ class FilterContainer(object):
         self.context = context
         method = getattr(self, kw['method_name'])
         default_filter_class = filter_types.QFilter
-        filter_class, *make_filter_args = getattr(method, 'make_filter_args',
-                                                  (default_filter_class,))
+        make_filter_args = getattr(method, 'make_filter_args',
+                                   (default_filter_class,))
+        filter_class, make_filter_args = make_filter_args[0], make_filter_args[1:]
         make_filter_kwargs = getattr(method, 'make_filter_kwargs', {})
-        filter_class.register(self)
-        self._filter = filter_factory.make_filter(filter_class,
-                                                  *make_filter_args,
-                                                  **make_filter_kwargs)
+        self._filter = filter_factory.make_filter(filter_class, self,
+                                                 *make_filter_args, **make_filter_kwargs)
 
     ## Delegate filtering to _filter
 
@@ -56,7 +60,10 @@ class FilterContainer(object):
     ##
     
     def __repr__(self):
-        return '%s (%s)' % (self.method_name, self._filter.__class__)
+        try:
+            return '%s (%s)' % (self.method_name, self._filter.__class__)
+        except AttributeError:
+            return super().__repr__()
     
     def _init_all(self, context, *args, **kw):
         self._filters = []
@@ -69,6 +76,9 @@ class FilterContainer(object):
             return iter(self._filters)
         except AttributeError:
             raise Exception('Not a filter container')
+    
+#    def __call__(self):
+#        return reduce(self.combine, self._filters, query.EmptyQuerySet())
     
     @classmethod
     def is_filter_method(cls, name):
@@ -89,6 +99,7 @@ class FilterContainer(object):
 #Luck.objects.filter(value=1)
 #%%
 
+
 class MyFilters(FilterContainer):
     
     def filter__method(self):
@@ -98,8 +109,7 @@ class MyFilters(FilterContainer):
 filters = MyFilters()
 #%%
 #inspect.ismemberdescriptor(getattr(MyFilters, 'filter__method'))
-for s in dir(inspect):
-    if 'method' in s: print(s)
+
 #%%
 #%%
 
