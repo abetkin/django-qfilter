@@ -74,8 +74,11 @@ class FilterContainer(object):
     def __iter__(self):
         return iter(self._filters)
     
-    def __call__(self):
-        return reduce(self.combine, self._filters, query.EmptyQuerySet())
+    def __call__(self, queryset):
+        if self._filters:
+            combined = reduce(self.combine, self._filters)
+            return combined(queryset)
+        return queryset
     
 
 

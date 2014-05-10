@@ -12,14 +12,10 @@ class QuerySetFilter(object):
     '''
 
     def __and__(self, other):
-        if isinstance(other, QuerySetFilter):
-            return lambda queryset: self(queryset) & other(queryset)
-        return NotImplemented
+        return lambda queryset: self(queryset) & other(queryset)
         
     def __or__(self, other):
-        if isinstance(other, QuerySetFilter):
-            return lambda queryset: self(queryset) | other(queryset)
-        return NotImplemented    
+        return lambda queryset: self(queryset) | other(queryset)
 
 
 class QFilter(QuerySetFilter):

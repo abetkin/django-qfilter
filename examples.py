@@ -18,11 +18,14 @@ from dec import make_filter
 class MyFilters(containers.MethodFilter):
     
     @make_filter(filters.ValuesDictFilter, fields_list=['value'])
-    def filter__method(self, obj):
-        return obj['value'] == 1
-#%%
+    def filter__2(self, obj):
+        return obj['value'] == 2
+    
+    def filter__1_2(self):
+        return Q(value=2)
 
+#%%
 from qfilters.models import Luck
-m = list(MyFilters())[0]
-for luck in m(Luck.objects.all()):
-    print luck.value,
+fi = MyFilters()
+#%%
+fi(Luck.objects.all())
