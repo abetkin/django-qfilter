@@ -1,8 +1,16 @@
 # -*- coding: utf-8 -*-
 import ipdb
-from abc import ABCMeta
 from django.db.models import Q, query
 import operator
+#%%
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
+from unicom.private.questionary.models import Questionary
+
+#%%
+for q in Questionary.objects.all()[:1000]:
+    if q.has_guarantee:
+        print q.id,
 #%%
 
 class QuerySetFilter(object):
@@ -101,15 +109,20 @@ class CallablesList(list):
         return reduce(self.operation, results)
 
 #%%
+def f(*args):
+    print args
+f()
+
+#%%
 
 class ValuesDictFilter(QuerySetFilter):
     
     def __new__(cls, *args, **kw):
-        if not args and kw.keys() == ['fields_list']:
+        if args == ('@',):
             # this is reserved for using class as decorator
-            def newobj(*fargs, **fkw):
-                obj = cls(*fargs, **fkw)
-                obj.fields_list = kw['fields_list']
+            def newobj(func):
+                obj = cls(func)
+                obj.__dict__.update(kw)
                 return obj
             return newobj
         return super(ValuesDictFilter, cls).__new__(cls, *args, **kw)
@@ -136,14 +149,159 @@ class ValuesDictFilter(QuerySetFilter):
             return self._apply_op(lambda x, y: x or y, other)
         return super(ValuesDictFilter, self).__and__(other)
     
-    def __call__(self, queryset):
+    def _fetch_objects(self, queryset):
         fields_list = ['pk'] + self.fields_list
-        objects = queryset.values(*fields_list)
+        return queryset.values(*fields_list)
+    
+    def __call__(self, queryset):
+        objects = self._fetch_objects(queryset)
         pks = [obj['pk'] for obj in objects
                          if self.filter_func(obj)]
         return queryset.filter(pk__in=pks)
 
 #%%
+class PropertyBasedFilter(ValuesDictFilter):
+    
+    def __init__(self, filter_func, fields_list=None, properties=None):
+        super(PropertyBasedFilter, self).__init__(filter_func, fields_list)
+        if properties:
+            self.properties = properties
+    
+    def _fetch_objects(self, queryset):
+        
+        class FetchedObject(dict):
+#            def __init__(self, *args, **kw):
+                super(FetchedObject, self).__init__(*args, **kw)
+                tuples = [key.split('__')
+                          for key, value in self.items()]
+                for tupl in sorted(tuples):
+                    
+#                self.__dict__ = self
+        
+        def __getattr__(self, name)
+        
+        for property_name in self.properties:
+            prop = getattr(queryset.model, property_name)
+            setattr(FetchedObject, property_name, property(prop.fget))
+        
+        fields_list = ['pk'] + self.fields_list
+        objects = queryset.values(*fields_list)
+        for dic in objects:
+            dic.__class__ = FetchedObject
+        return objects
+#%%
+@PropertyBasedFilter('@', )
+def filter_func(obj):
+    return obj.has_guarantee
+
+#%%
+
+class as_object(dict):
+    '''
+    self.__dict__ is self.
+    '''
+    
+    def __init__(self, *args, **kw):
+        super(as_object, self).__init__(*args, **kw)
+        self.__dict__ = self
+
+#%%
+
+def make_nested_object(values_dict):
+    values_dict = {tuple(key.split('__')): value
+                   for key, value in values_dict.items()}
+
+#%%
+values_dict = {tuple(key.split('__')): value for key, value in {
+    'aa': 1,
+    'a__bb': 2,
+    'a__b__c': 3,
+    'a__b__d': 4,
+}.items()}
+
+class merge_values(dict):
+    '''
+    Assume values in a dict are dicts. When setting value for key with existing value
+    merge values (i.e. dicts) instead of ovewriting the old one.
+    '''  
+    
+    def __setitem__(self, key, value):
+        if self.get(key):
+            value = self.fromitems(self[key].items() + value.items())
+        super(merge_values, self).__setitem__(key, value)
+    
+    @classmethod
+    def fromitems(cls, items):
+        dic = None
+        for key, value in items:
+            if not dic:
+                dic_type = type('special_%s' % value.__class__.__name__,
+                              (cls, value.__class__),
+                              {})
+                dic = dic_type(key=value)
+            assert isinstance(dic, value.__class__), 'Items must be of the same type'
+            dic[key] = value
+        return dic
+        
+#%%
+def by_parent_tuple(tuples_dict):
+    for tupl, value in values_dict.items():
+        if not tupl:
+            yield tupl, value
+        else:
+            yield tupl[:-1], as_object({tupl[-1]: value})
+items = list(by_parent_tuple(values_dict))
+print items
+
+#%%
+o = items[0][1]
+p = items[1][1]
+print o
+print p
+#%%
+q = o.__class__(o.items() + u.items())
+q
+#%%
+values_dict = merge_values.fromitems(items)
+values_dict
+#%%
+#tuples_dict = dict(tuples)
+
+tuples = values_dict.keys()
+tuples
+#%%
+def _groups():
+#    for key, obj in tuples:
+#        if not key:
+#            yield key, obj
+#    tuples
+    tuples
+    tuples = sorted(tuples, key=lambda t: len(t[0]), reverse=True)
+    for key, it in groupby([t[0] for t in nonzero], key=lambda t: t[:-1]):
+        d = as_object()
+        for tupl in it:
+            d[tupl[-1]] = tuples_dict[tupl]
+        yield key, d
+tuples = list(_groups()) 
+#%%
+tuples
+#%%
+d = {}
+tuples = sorted(tuples, reverse=True)
+
+length = len(tuples[0][0])
+for t, v in tuples:
+    if len(t) < length:
+        d.
+        d = as_object({t[-1]: d})
+    else:
+        d[t[-1]] = v
+#%%
+d.a.b
+#%%
+
+
+
 #
 #import os
 #os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'

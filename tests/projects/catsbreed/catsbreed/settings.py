@@ -1,5 +1,5 @@
 """
-Django settings for hvost project.
+Django settings for catsbreed project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/dev/topics/settings/
@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # See https://docs.djangoproject.com/en/dev/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '0@0qg3+a0@_^@@s(w4k%hh0dj+83c*_-d@cp$38p9%#(0il-(5'
+SECRET_KEY = '6z99$)-vv(g=@e8qvtte=1fiv+^nsj%mz3px5%2p@qk&j=*+cz'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -36,7 +36,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'qfilters', 
+    'main',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -49,9 +49,9 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'hvost.urls'
+ROOT_URLCONF = 'catsbreed.urls'
 
-WSGI_APPLICATION = 'hvost.wsgi.application'
+WSGI_APPLICATION = 'catsbreed.wsgi.application'
 
 
 # Database

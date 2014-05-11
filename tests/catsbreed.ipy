@@ -1,0 +1,58 @@
+#!env ipython
+# -*- coding: utf-8 -*-
+
+"""Test django project for QFilter testsuite:
+"Cat's breed".
+
+The project helps you decide what is the best cat's breed for you.
+
+
+Usage:
+  catsbreed.ipy (init | clear | test)
+  catsbreed.ipy
+  
+"""
+
+import os, sys
+from docopt import docopt
+import zipfile
+import re
+
+_dir = os.path.dirname(__file__)
+
+def init():
+    print('== init catsbreed project ==')
+    
+    if not 'build' in os.listdir('.'):
+        !mkdir build
+    if not 'catsbreed' in os.listdir('build'):
+        !cp -r projects/catsbreed ./build
+        os.chdir('build/catsbreed')
+        !find . -name '*.sqlite3' -delete
+        !./manage.py makemigrations
+        !./manage.py migrate
+    else:
+        os.chdir('build/catsbreed')
+    os.environ['DJANGO_SETTINGS_MODULE']='catsbreed.settings'
+    import django
+    django.setup()
+    from main.models import CatsBreed
+    for name in CatsBreed.objects.values_list('name', flat=1):
+        print name
+
+def clear():
+    if os.path.exists('build/catsbreed'):
+        !rm -rf build/catsbreed
+    else:
+        print('Nothing to clear')
+
+if __name__ == '__main__':
+    args = docopt(__doc__)
+    
+    os.chdir(_dir)
+    if args['init']:
+        init()
+    elif args['clear']:
+        clear()
+    else:
+        1
