@@ -108,10 +108,6 @@ class CallablesList(list):
         results = reversed(results) # make it queue not stack
         return reduce(self.operation, results)
 
-#%%
-def f(*args):
-    print args
-f()
 
 #%%
 
@@ -158,7 +154,51 @@ class ValuesDictFilter(QuerySetFilter):
         pks = [obj['pk'] for obj in objects
                          if self.filter_func(obj)]
         return queryset.filter(pk__in=pks)
+#%%
+fields_list = [
+    'name',
+    'dummy__field',
+    'can_live_with__weight'
+]
+#%%
+from itertools import groupby
+tuples = [tuple(key.split('__')) for key in fields_list]
+fields_dict = dict(zip([t[-1] for t in tuples],
+                       map(Attribute, fields_list)))
+#%%
+print fields_dict
+#%%
+def make_tree(tuples):
+    '''
+    [(1, 2, 3),
+    (1, 3, 4),
+    (1, 3, 5)]
+    -> dict
+    result[1][3][5]
+    '''
+    tuples = filter(None, tuples)
+    print tuples
+    def gen():
+        for first_elt, tupls in groupby(tuples, key=lambda t: t[0]):
+            subtree = make_tree(t[1:] for t in tupls)
+            yield first_elt, dict(subtree) if subtree else fields_dict[first_elt]
+    return dict(gen())
 
+#%%
+tree = make_tree(tuples)
+tree
+#%%
+tuples
+#%%
+class Attribute(str):
+    '''Obviously can be overriden.'''
+    
+    def lookup(self, dic):
+        return dic[self]
+
+#%%
+d = {'a': 1}
+d[Attribute('a')]
 #%%
 class PropertyBasedFilter(ValuesDictFilter):
     
@@ -169,16 +209,35 @@ class PropertyBasedFilter(ValuesDictFilter):
     
     def _fetch_objects(self, queryset):
         
-        class FetchedObject(dict):
-#            def __init__(self, *args, **kw):
-                super(FetchedObject, self).__init__(*args, **kw)
-                tuples = [key.split('__')
-                          for key, value in self.items()]
-                for tupl in sorted(tuples):
-                    
-#                self.__dict__ = self
+        class Lookup(object):
+            prefix = None
+            keys = make_tree(key.split('__') for key in self.fields_list)
+    
+            def __getattr__(self, name):
+                if name in self._keys:
+                    lookup = ('__'.join((self.prefix, name))
+                              if self.prefix else name)
+                    self._keys = self._keys[name]
+                    if not self._keys:
+                        self._lookup = None
+                        return self[lookup]
+                    else:
+                        self._lookup = lookup
+                        return self
         
-        def __getattr__(self, name)
+        class FetchedObject(dict):
+
+            def __getattr__(self, name):
+                if name in self._keys:
+                    lookup = ('__'.join((self._lookup, name))
+                                    if self._lookup else name)
+                    self._keys = self._keys[name]
+                    if not self._keys:
+                        self._lookup = None
+                        return self[lookup]
+                    else:
+                        self._lookup = lookup
+                        return self
         
         for property_name in self.properties:
             prop = getattr(queryset.model, property_name)
@@ -186,14 +245,22 @@ class PropertyBasedFilter(ValuesDictFilter):
         
         fields_list = ['pk'] + self.fields_list
         objects = queryset.values(*fields_list)
-        for dic in objects:
-            dic.__class__ = FetchedObject
-        return objects
+        return [FetchedObject(dic) for dic in objects]
+        
 #%%
-@PropertyBasedFilter('@', )
+@PropertyBasedFilter('@', fields_list=['dummy__field'], properties=['has_dummy'])
 def filter_func(obj):
-    return obj.has_guarantee
+    import ipdb
+    ipdb.set_trace()
+    return obj.has_dummy
 
+#%%
+filter_func(CatsBreed.objects.all())
+#%%
+d = {}
+class MyDict(dict):
+    pass
+d.__class__ = MyDict
 #%%
 
 class as_object(dict):

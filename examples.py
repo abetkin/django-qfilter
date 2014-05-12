@@ -7,7 +7,7 @@ Created on Sat May 10 11:44:15 2014
 
 #%%
 import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'hvost.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'catsbreed.settings'
 import django
 from django.db.models import Q
 #%%

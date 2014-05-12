@@ -5,6 +5,9 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 # Create your models here.
 
+class Dummy(models.Model):
+    field = models.CharField(max_length=50)
+
 class CatsBreed(models.Model):
     name = models.CharField(max_length=20)
     good_hunter = models.NullBooleanField()
@@ -21,6 +24,15 @@ class CatsBreed(models.Model):
     weight = models.FloatField(u'Вес, кг', null=True)
     traits = models.CharField(u'Отличительные черты в свободной форме',
                               max_length=1000, null=True)
+    dummy = models.ForeignKey(Dummy, null=True)
+    
+    @property
+    def has_dummy(self):
+        return self.dummy
+    
+    
+    def can_live_with_big_dogs(self):
+        return self.can_live_with
     
     def __unicode__(self):
         return self.name
