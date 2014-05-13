@@ -161,14 +161,78 @@ fields_list = [
     'can_live_with__weight'
 ]
 #%%
-from itertools import groupby
-tuples = [tuple(key.split('__')) for key in fields_list]
-fields_dict = dict(zip([t[-1] for t in tuples],
-                       map(Attribute, fields_list)))
+#from itertools import groupby
+#tuples = [tuple(key.split('__')) for key in fields_list]
+#fields_dict = dict(zip([t[-1] for t in tuples], fields_list))
 #%%
 print fields_dict
+tuples
 #%%
-def make_tree(tuples):
+
+#%%
+class Attribute(dict):
+
+    def __init__(self, *args, **kw):
+        self.__dict__ = self
+        super(Attribute, self).__init__(*args, **kw)
+    
+    
+    @classmethod
+    def from_fields_list(cls, fields_list, parent_field=None):
+        '''
+        [(1, 2, 3),
+        (1, 3, 4),
+        (1, 3, 5)]
+        -> dict
+        result[1][3][5]
+        '''
+        fields_list = filter(None, fields_list)
+        def _items():
+            head__tail = [field.partition('__') for field in fields_list]
+            
+            for head, head__tail in groupby(head__tail, key=lambda t: t[0]):
+                if not parent_field:
+                    parent = head
+                else:
+                    parent = '__'.join([parent_field, head])
+                attr = cls.from_fields_list(
+                        (parts[-1] for parts in head__tail), parent_field=parent)
+                setattr(cls, head, attr)
+#                yield head, attr
+        return cls()
+    
+    @property
+    def value(self):
+        return self.object.get(self.attribute_name)
+    
+    def __get__(self, instance, owner):
+        assert instance
+        self.object = instance.object
+        return self or self.value
+
+#%%
+
+#classmethod for Atribute
+#def make_tree(tuples, name=None):
+#    '''
+#    [(1, 2, 3),
+#    (1, 3, 4),
+#    (1, 3, 5)]
+#    -> dict
+#    result[1][3][5]
+#    '''
+#    tuples = filter(None, tuples)
+#    def gen():
+#        for first_elt, tupls in groupby(tuples, key=lambda t: t[0]):
+#            sub_name = '__'.join(filter(None, [name, first_elt]))
+#            subtree = make_tree((t[1:] for t in tupls), name=sub_name)
+#            print subtree
+#            yield first_elt, subtree if subtree else "LEAF"
+#            # by first elt
+#    return dict(gen())
+
+#%%
+def make_tree(fields_list, parent_field=None):
     '''
     [(1, 2, 3),
     (1, 3, 4),
@@ -176,16 +240,22 @@ def make_tree(tuples):
     -> dict
     result[1][3][5]
     '''
-    tuples = filter(None, tuples)
-    print tuples
+    fields_list = filter(None, fields_list)
     def gen():
-        for first_elt, tupls in groupby(tuples, key=lambda t: t[0]):
-            subtree = make_tree(t[1:] for t in tupls)
-            yield first_elt, dict(subtree) if subtree else fields_dict[first_elt]
-    return dict(gen())
-
+        head__tail = [field.partition('__') for field in fields_list]
+        
+        for head, head__tail in groupby(head__tail, key=lambda t: t[0]):
+            if not parent_field:
+                parent = head
+            else:
+                parent = '__'.join([parent_field, head])
+            subtree = make_tree((parts[-1] for parts in head__tail),
+                                parent_field=parent)
+            yield head, subtree
+            # cls.head = Attribute
+    return Attribute(gen())
 #%%
-tree = make_tree(tuples)
+tree = make_tree(fields_list)
 tree
 #%%
 tuples
