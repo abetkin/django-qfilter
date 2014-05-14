@@ -160,56 +160,50 @@ fields_list = [
     'dummy__field',
     'can_live_with__weight'
 ]
-#%%
-#from itertools import groupby
-#tuples = [tuple(key.split('__')) for key in fields_list]
-#fields_dict = dict(zip([t[-1] for t in tuples], fields_list))
-#%%
-print fields_dict
-tuples
-#%%
+
+#XXX extend: make field extend str and define `def value()`
 
 #%%
-class Attribute(dict):
+class Attribute(object):
 
-    def __init__(self, *args, **kw):
-        self.__dict__ = self
-        super(Attribute, self).__init__(*args, **kw)
-    
+    def __init__(self, name, lookup_dict=None):
+        self.name = name
+        self._dict = lookup_dict
     
     @classmethod
     def from_fields_list(cls, fields_list, parent_field=None):
-        '''
-        [(1, 2, 3),
-        (1, 3, 4),
-        (1, 3, 5)]
-        -> dict
-        result[1][3][5]
-        '''
         fields_list = filter(None, fields_list)
-        def _items():
-            head__tail = [field.partition('__') for field in fields_list]
-            
-            for head, head__tail in groupby(head__tail, key=lambda t: t[0]):
-                if not parent_field:
-                    parent = head
-                else:
-                    parent = '__'.join([parent_field, head])
-                attr = cls.from_fields_list(
-                        (parts[-1] for parts in head__tail), parent_field=parent)
-                setattr(cls, head, attr)
-#                yield head, attr
-        return cls()
+        if not fields_list:
+            return cls(parent_field)
+        attr_class = type('%s_%s' % (parent_field or 'root', cls.__name__),
+                          (cls,), {})
+        head__tail = [field.partition('__') for field in fields_list]
+        
+        for head, head__tail in groupby(head__tail, key=lambda t: t[0]):
+            if not parent_field:
+                parent = head
+            else:
+                parent = '__'.join([parent_field, head])
+            attr = cls.from_fields_list(
+                    (parts[-1] for parts in head__tail),
+                    parent_field=parent)
+            setattr(attr_class, head, attr)
+        return attr_class(parent_field)
     
     @property
     def value(self):
-        return self.object.get(self.attribute_name)
+        'FIXME'
     
     def __get__(self, instance, owner):
         assert instance
-        self.object = instance.object
-        return self or self.value
+        self._dict = instance._dict
+        if self._dict and self.name in self._dict:
+            return self._dict[self.name]
+        return self
 
+#%%
+from itertools import groupby
+Attribute.from_fields_list(fields_list)
 #%%
 
 #classmethod for Atribute
