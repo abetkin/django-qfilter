@@ -20,7 +20,7 @@ import re
 
 _dir = os.path.dirname(__file__)
 
-def init():
+def do_init():
     print('== init catsbreed project ==')
     
     if not 'build' in os.listdir('.'):
@@ -33,26 +33,33 @@ def init():
         !./manage.py migrate
     else:
         os.chdir('build/catsbreed')
-    os.environ['DJANGO_SETTINGS_MODULE']='catsbreed.settings'
-    import django
-    django.setup()
-    from main.models import CatsBreed
-    for name in CatsBreed.objects.values_list('name', flat=1):
-        print name
 
-def clear():
+def do_clear():
     if os.path.exists('build/catsbreed'):
         !rm -rf build/catsbreed
     else:
         print('Nothing to clear')
+        
+def do_test():
+#    pypath = os.path.join(_dir, '..')
+    proj_dir = os.path.abspath(os.path.join(_dir, 'build/catsbreed'))
+#    os.chdir(proj_dir)
+    os.environ['PYTHONPATH'] = os.pathsep.join([
+        os.path.abspath(os.path.join(_dir, '..')),
+        proj_dir,
+        os.environ['PYTHONPATH'],
+    ])
+    
+#    !PYTHONPATH={pypath}; nose2 catsbreed
+    !nose2
 
 if __name__ == '__main__':
     args = docopt(__doc__)
     
     os.chdir(_dir)
     if args['init']:
-        init()
+        do_init()
     elif args['clear']:
-        clear()
-    else:
-        1
+        do_clear()
+    elif args['test']:
+        do_test()

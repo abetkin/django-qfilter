@@ -5,14 +5,7 @@ import operator
 from itertools import groupby
 #%%
 import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'catsbreed.settings'
-#import django
-#django.setup()
-from main.models import CatsBreed, Animal, Dog
-d = Dog.objects.create(breed='small', weight=1)
-CatsBreed.objects.all()[4].can_live_with.add(d)
-#%%
-CatsBreed.objects.values('can_live_with')
+
 #%%
 
 class QuerySetFilter(object):
@@ -196,9 +189,13 @@ class Attribute(object):
         return value
     
     def __get__(self, instance, owner):
-        assert instance
-        self._dict = instance._dict
-        return self if not self._empty else self.get_value()
+#        if owner:
+#            return self
+        try:
+            self._dict = instance._dict
+            return self if not self._empty else self.get_value()
+        except:
+            return self
 
 #%%
 class PropertyBasedFilter(ValuesDictFilter):
@@ -212,134 +209,40 @@ class PropertyBasedFilter(ValuesDictFilter):
         fields_list = ['pk'] + self.fields_list
         Object = Attribute.make_class_from_fields_list(fields_list)
         
+        def get_field_model(model, field_name):
+            return getattr(model, field_name).field.related.parent_model
+        
         for property_name in self.properties:
-            prop = getattr(queryset.model, property_name)
-            setattr(Object, property_name, property(prop.fget))
+            split_name = property_name.split('.')
+            model_class = reduce(lambda model, field: get_field_model(model, field),
+                                 split_name[:-1],
+                                 queryset.model)
+            attribute_class = reduce(lambda x, y: getattr(x, y), split_name[:-1], Object)
+            prop = getattr(model_class, split_name[-1])
+            setattr(attribute_class, split_name[-1], property(prop.fget))
         
         
         objects = queryset.values(*fields_list)
         return [Object(values_dict=dic) for dic in objects]
         
-#%%
-from collections import namedtuple
-Exists = namedtuple('Exists', ['exists'])
-
-class M2MAnimal(str):
-    def transform(self, pk):
-        return Exists(lambda: True) if pk else Exists(lambda: False)
-
-@PropertyBasedFilter('@',
-                     fields_list=[M2MAnimal('can_live_with')], 
-                     properties=['can_have_other_animals'])
-def filter_func(obj):
-    return obj.can_have_other_animals
-
-#%%
-print filter_func(CatsBreed.objects.all())
-#%%
-
+##%%
+#from collections import namedtuple
+#Exists = namedtuple('Exists', ['exists'])
+#
+#class M2MAnimal(str):
+#    def transform(self, pk):
+#        return Exists(lambda: True) if pk else Exists(lambda: False)
+#
+#@PropertyBasedFilter('@',
+#                     fields_list=[M2MAnimal('can_live_with')], 
+#                     properties=['can_have_other_animals'])
+#def filter_func(obj):
+#    return obj.can_have_other_animals
+#
+##%%
+#print filter_func(CatsBreed.objects.all())
 #%%
 
+#%%
 
 
-#
-#import os
-#os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
-#
-##%%
-#
-##with ipdb.launch_ipdb_on_exception():
-#@ValuesDictFilter(fields_list=[])
-#def filtr(obj):
-#    return obj['pk'] == 11978
-#
-#@ValuesDictFilter(fields_list=['region_list__city_type'])
-#def fname(obj):
-#    return obj['region_list__city_type']
-##    return obj['company_name'] in (u'Альфа-Банк', u'Абсолют Банк', u'Авангард')
-#
-#
-##%%
-#import operator
-#from unicom.crm.models import BankCompany
-#f = filtr & fname
-#f
-#
-##%%
-##BankCompany.objects.get(pk=11978).company_name
-#qs = f(BankCompany.objects.all())
-#qs.count()
-#
-##%%
-#
-#@QuerysetIterationHook
-#def set_hvost(obj):
-#    obj.hvost = 30
-#
-#@QuerysetIterationHook
-#def set_color(obj):
-#    obj.color = 'grey'
-#
-#f = set_color | set_hvost
-#
-##%%
-#
-#qs = f(BankCompany.objects.filter(id=11978))
-#qs[0].color + ' ' + str(qs[0].hvost)
-##%%
-#
-##%%
-#
-#'Init project'
-#
-#import os
-#os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
-#
-#from django.db.models import Q
-#
-##%%
-#
-#@QFilter
-#def my_filter(queryset):
-#    return BankCompany.objects.filter(id__in=(11949, 11978))
-#
-#@QFilter
-#def filtr(qs):
-#    return Q(id=11978)
-#
-##%%
-#
-#(my_filter & filtr)(BankCompany.objects.all())
-#
-###%%
-##'test QFilter'
-##
-##q_filter = QFilter(Q(id=11949))
-##qs = queryset = BankCompany.objects.all()
-##q_filter(qs)
-##
-##%%
-#'test SimpleQuerysetFilter'
-#
-#qs = BankCompany.objects.filter(id=11949)
-#qsfilter = SimpleQuerysetFilter(qs)
-#qsfilter(qs)
-#
-#%%
-#'test ValuesDictFilter'
-#
-#values_filter = ValuesDictFilter([], lambda obj: obj['pk']==11949)
-#values_filter(queryset)
-##%%
-#'test QuerysetIterationHook'
-#
-#qs = BankCompany.objects.all()[:5]
-#def hook_func(obj):
-#    print obj.pk
-#    return obj
-#
-#iter_hook = QuerysetIterationHook(hook_func)
-#nu = iter_hook(qs)
-#nu
-#
-#%%
