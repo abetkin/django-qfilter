@@ -155,6 +155,7 @@ class ValuesDictFilter(QuerySetFilter):
                          if self.filter_func(obj)]
         return queryset.filter(pk__in=pks)
 #%%
+
 fields_list = [
     'name',
     'dummy__field',
@@ -189,6 +190,11 @@ class Attribute(object):
                     parent_field=parent)
             setattr(attr_class, head, attr)
         return attr_class(parent_field)
+    
+    '''
+    dispatch on `name` type
+    __isnone__
+    '''
     
     @property
     def value(self):
