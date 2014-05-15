@@ -2,15 +2,17 @@
 import ipdb
 from django.db.models import Q, query
 import operator
+from itertools import groupby
 #%%
 import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
-from unicom.private.questionary.models import Questionary
-
+os.environ['DJANGO_SETTINGS_MODULE'] = 'catsbreed.settings'
+#import django
+#django.setup()
+from main.models import CatsBreed, Animal, Dog
+d = Dog.objects.create(breed='small', weight=1)
+CatsBreed.objects.all()[4].can_live_with.add(d)
 #%%
-for q in Questionary.objects.all()[:1000]:
-    if q.has_guarantee:
-        print q.id,
+CatsBreed.objects.values('can_live_with')
 #%%
 
 class QuerySetFilter(object):
@@ -151,32 +153,26 @@ class ValuesDictFilter(QuerySetFilter):
     
     def __call__(self, queryset):
         objects = self._fetch_objects(queryset)
-        pks = [obj['pk'] for obj in objects
+        get_pk = lambda obj: getattr(obj, 'pk', None) or obj['pk']
+        pks = [get_pk(obj) for obj in objects
                          if self.filter_func(obj)]
         return queryset.filter(pk__in=pks)
-#%%
-
-fields_list = [
-    'name',
-    'dummy__field',
-    'can_live_with__weight'
-]
-
-#XXX extend: make field extend str and define `def value()`
 
 #%%
 class Attribute(object):
 
-    def __init__(self, name, lookup_dict=None):
+    _empty = True # does not contain other attributes
+
+    def __init__(self, name=None, values_dict=None):
         self.name = name
-        self._dict = lookup_dict
+        self._dict = values_dict
     
     @classmethod
-    def from_fields_list(cls, fields_list, parent_field=None):
+    def make_class_from_fields_list(cls, fields_list, parent_field=None):
         fields_list = filter(None, fields_list)
         if not fields_list:
-            return cls(parent_field)
-        attr_class = type('%s_%s' % (parent_field or 'root', cls.__name__),
+            return cls
+        result = type('%s_%s' % (parent_field or 'root', cls.__name__),
                           (cls,), {})
         head__tail = [field.partition('__') for field in fields_list]
         
@@ -185,90 +181,25 @@ class Attribute(object):
                 parent = head
             else:
                 parent = '__'.join([parent_field, head])
-            attr = cls.from_fields_list(
+            attr_class = cls.make_class_from_fields_list(
                     (parts[-1] for parts in head__tail),
                     parent_field=parent)
-            setattr(attr_class, head, attr)
-        return attr_class(parent_field)
+            setattr(result, head, attr_class(parent))
+            result._empty = False
+        return result
     
-    '''
-    dispatch on `name` type
-    __isnone__
-    '''
-    
-    @property
-    def value(self):
-        'FIXME'
+    def get_value(self):
+        assert self._dict and self.name in self._dict, str(self._dict.items()) + str(self.name)
+        value = self._dict[self.name]
+        if hasattr(self.name, 'transform'):
+            value = self.name.transform(value)
+        return value
     
     def __get__(self, instance, owner):
         assert instance
         self._dict = instance._dict
-        if self._dict and self.name in self._dict:
-            return self._dict[self.name]
-        return self
+        return self if not self._empty else self.get_value()
 
-#%%
-from itertools import groupby
-Attribute.from_fields_list(fields_list)
-#%%
-
-#classmethod for Atribute
-#def make_tree(tuples, name=None):
-#    '''
-#    [(1, 2, 3),
-#    (1, 3, 4),
-#    (1, 3, 5)]
-#    -> dict
-#    result[1][3][5]
-#    '''
-#    tuples = filter(None, tuples)
-#    def gen():
-#        for first_elt, tupls in groupby(tuples, key=lambda t: t[0]):
-#            sub_name = '__'.join(filter(None, [name, first_elt]))
-#            subtree = make_tree((t[1:] for t in tupls), name=sub_name)
-#            print subtree
-#            yield first_elt, subtree if subtree else "LEAF"
-#            # by first elt
-#    return dict(gen())
-
-#%%
-def make_tree(fields_list, parent_field=None):
-    '''
-    [(1, 2, 3),
-    (1, 3, 4),
-    (1, 3, 5)]
-    -> dict
-    result[1][3][5]
-    '''
-    fields_list = filter(None, fields_list)
-    def gen():
-        head__tail = [field.partition('__') for field in fields_list]
-        
-        for head, head__tail in groupby(head__tail, key=lambda t: t[0]):
-            if not parent_field:
-                parent = head
-            else:
-                parent = '__'.join([parent_field, head])
-            subtree = make_tree((parts[-1] for parts in head__tail),
-                                parent_field=parent)
-            yield head, subtree
-            # cls.head = Attribute
-    return Attribute(gen())
-#%%
-tree = make_tree(fields_list)
-tree
-#%%
-tuples
-#%%
-class Attribute(str):
-    '''Obviously can be overriden.'''
-    
-    def lookup(self, dic):
-        return dic[self]
-
-#%%
-d = {'a': 1}
-d[Attribute('a')]
 #%%
 class PropertyBasedFilter(ValuesDictFilter):
     
@@ -278,163 +209,35 @@ class PropertyBasedFilter(ValuesDictFilter):
             self.properties = properties
     
     def _fetch_objects(self, queryset):
-        
-        class Lookup(object):
-            prefix = None
-            keys = make_tree(key.split('__') for key in self.fields_list)
-    
-            def __getattr__(self, name):
-                if name in self._keys:
-                    lookup = ('__'.join((self.prefix, name))
-                              if self.prefix else name)
-                    self._keys = self._keys[name]
-                    if not self._keys:
-                        self._lookup = None
-                        return self[lookup]
-                    else:
-                        self._lookup = lookup
-                        return self
-        
-        class FetchedObject(dict):
-
-            def __getattr__(self, name):
-                if name in self._keys:
-                    lookup = ('__'.join((self._lookup, name))
-                                    if self._lookup else name)
-                    self._keys = self._keys[name]
-                    if not self._keys:
-                        self._lookup = None
-                        return self[lookup]
-                    else:
-                        self._lookup = lookup
-                        return self
+        fields_list = ['pk'] + self.fields_list
+        Object = Attribute.make_class_from_fields_list(fields_list)
         
         for property_name in self.properties:
             prop = getattr(queryset.model, property_name)
-            setattr(FetchedObject, property_name, property(prop.fget))
+            setattr(Object, property_name, property(prop.fget))
         
-        fields_list = ['pk'] + self.fields_list
+        
         objects = queryset.values(*fields_list)
-        return [FetchedObject(dic) for dic in objects]
+        return [Object(values_dict=dic) for dic in objects]
         
 #%%
-@PropertyBasedFilter('@', fields_list=['dummy__field'], properties=['has_dummy'])
+from collections import namedtuple
+Exists = namedtuple('Exists', ['exists'])
+
+class M2MAnimal(str):
+    def transform(self, pk):
+        return Exists(lambda: True) if pk else Exists(lambda: False)
+
+@PropertyBasedFilter('@',
+                     fields_list=[M2MAnimal('can_live_with')], 
+                     properties=['can_have_other_animals'])
 def filter_func(obj):
-    import ipdb
-    ipdb.set_trace()
-    return obj.has_dummy
+    return obj.can_have_other_animals
 
 #%%
-filter_func(CatsBreed.objects.all())
-#%%
-d = {}
-class MyDict(dict):
-    pass
-d.__class__ = MyDict
+print filter_func(CatsBreed.objects.all())
 #%%
 
-class as_object(dict):
-    '''
-    self.__dict__ is self.
-    '''
-    
-    def __init__(self, *args, **kw):
-        super(as_object, self).__init__(*args, **kw)
-        self.__dict__ = self
-
-#%%
-
-def make_nested_object(values_dict):
-    values_dict = {tuple(key.split('__')): value
-                   for key, value in values_dict.items()}
-
-#%%
-values_dict = {tuple(key.split('__')): value for key, value in {
-    'aa': 1,
-    'a__bb': 2,
-    'a__b__c': 3,
-    'a__b__d': 4,
-}.items()}
-
-class merge_values(dict):
-    '''
-    Assume values in a dict are dicts. When setting value for key with existing value
-    merge values (i.e. dicts) instead of ovewriting the old one.
-    '''  
-    
-    def __setitem__(self, key, value):
-        if self.get(key):
-            value = self.fromitems(self[key].items() + value.items())
-        super(merge_values, self).__setitem__(key, value)
-    
-    @classmethod
-    def fromitems(cls, items):
-        dic = None
-        for key, value in items:
-            if not dic:
-                dic_type = type('special_%s' % value.__class__.__name__,
-                              (cls, value.__class__),
-                              {})
-                dic = dic_type(key=value)
-            assert isinstance(dic, value.__class__), 'Items must be of the same type'
-            dic[key] = value
-        return dic
-        
-#%%
-def by_parent_tuple(tuples_dict):
-    for tupl, value in values_dict.items():
-        if not tupl:
-            yield tupl, value
-        else:
-            yield tupl[:-1], as_object({tupl[-1]: value})
-items = list(by_parent_tuple(values_dict))
-print items
-
-#%%
-o = items[0][1]
-p = items[1][1]
-print o
-print p
-#%%
-q = o.__class__(o.items() + u.items())
-q
-#%%
-values_dict = merge_values.fromitems(items)
-values_dict
-#%%
-#tuples_dict = dict(tuples)
-
-tuples = values_dict.keys()
-tuples
-#%%
-def _groups():
-#    for key, obj in tuples:
-#        if not key:
-#            yield key, obj
-#    tuples
-    tuples
-    tuples = sorted(tuples, key=lambda t: len(t[0]), reverse=True)
-    for key, it in groupby([t[0] for t in nonzero], key=lambda t: t[:-1]):
-        d = as_object()
-        for tupl in it:
-            d[tupl[-1]] = tuples_dict[tupl]
-        yield key, d
-tuples = list(_groups()) 
-#%%
-tuples
-#%%
-d = {}
-tuples = sorted(tuples, reverse=True)
-
-length = len(tuples[0][0])
-for t, v in tuples:
-    if len(t) < length:
-        d.
-        d = as_object({t[-1]: d})
-    else:
-        d[t[-1]] = v
-#%%
-d.a.b
 #%%
 
 

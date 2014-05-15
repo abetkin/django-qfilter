@@ -30,9 +30,9 @@ class CatsBreed(models.Model):
     def has_dummy(self):
         return self.dummy
     
-    
-    def can_live_with_big_dogs(self):
-        return self.can_live_with
+    @property
+    def can_have_other_animals(self):
+        return self.can_live_with.exists()
     
     def __unicode__(self):
         return self.name
