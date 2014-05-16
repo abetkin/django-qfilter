@@ -59,12 +59,15 @@ class BareFiltersTests(TestCase):
                              fields_list=['traits__weight', 'traits__weight_max'], 
                              properties=['traits.kg'])
         def light_cats(obj):
-            print obj.traits.kg
             return obj.traits.kg < 3
 
         qs = light_cats(self.CatsBreed.objects.all())
         assert qs.exists() and qs.count() < self.CatsBreed.objects.count()
 #%%
+
+
+'TODO: test ~qs'
+
 #
 #(my_filter & filtr)(BankCompany.objects.all())
 
