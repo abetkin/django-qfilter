@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import operator
+from filters import (QuerySetFilter, QFilter, ValuesDictFilter, QuerysetIterationHook,
+                     PropertyBasedFilter)
 
-import filters
-from django.db.models import Q, query
 
-#%%
 class MethodFilter(object):
     '''
     Allows to create filter instances from methods.
@@ -22,15 +21,15 @@ class MethodFilter(object):
         self.method_name = method_name
         self.context = context
         method = getattr(self, method_name)
-        default_filter_class = filters.QFilter
+        default_filter_class = QFilter
         # `make_filter_args` and `make_filter_kwargs`
         #  are usually obtained from method decorator arguments. See examples.
         make_filter_args = getattr(method, 'make_filter_args',
                                    (default_filter_class,))
         filter_class, make_filter_args = make_filter_args[0], make_filter_args[1:]
         make_filter_kwargs = getattr(method, 'make_filter_kwargs', {})
-        self._filter = make_filter(filter_class, self,
-                                   *make_filter_args, **make_filter_kwargs)
+        self._filter = makefilter(filter_class, self,
+                                  *make_filter_args, **make_filter_kwargs)
 
     ## Delegate filtering to `_filter`
 
@@ -38,9 +37,13 @@ class MethodFilter(object):
         return self._filter(queryset)
     
     def __and__(self, other):
+        if not isinstance(other, QuerySetFilter):
+            other = other._filter
         return self._filter & other
     
     def __or__(self, other):
+        if not isinstance(other, QuerySetFilter):
+            other = other._filter
         return self._filter | other
 
     ##
@@ -60,12 +63,14 @@ class MethodFilter(object):
 
 class FilterContainer(object):
     '''
-    Container for `MethodFilter`s ("items").
+    Container for `MethodFilter`s (from now on: "items").
     '''
     
     combine = operator.and_
     
     def __init__(self, items_class, *args, **kw):
+        if 'combine' in kw:
+            self.combine = kw.pop('combine')
         self._filters = []
         for method_name in items_class._get_methods_names():
             self._filters.append(
@@ -90,33 +95,32 @@ Is dispatched on `filter_class`.
 # Obviously registering factory functions globally is BAD
 # TODO: move to a class
 
-import filters
 from simplegeneric import generic
-
+#%%
 @generic
-def make_filter(filter_class, instance, *args, **kw):
+def makefilter(filter_class, instance, *args, **kw):
     raise NotImplementedError()
+#%%
 
-
-@make_filter.when_object(filters.QFilter)
+@makefilter.when_object(QFilter)
 def _(filter_class, instance):
     def filter_callable(queryset):
         method = getattr(instance, instance.method_name)
         instance.context['queryset'] = queryset
         return method()
-    return filters.QFilter(filter_callable)
+    return QFilter(filter_callable)
 
 
-@make_filter.when_object(filters.ValuesDictFilter)
-def _(filter_class, instance, fields_list):
+@makefilter.when_object(ValuesDictFilter, PropertyBasedFilter)
+def _(filter_class, instance, *args, **kw):
     method = getattr(instance, instance.method_name)
-    return filters.ValuesDictFilter(method, fields_list)
+    return filter_class(method,  *args, **kw)
 
 
-@make_filter.when_object(filters.QuerysetIterationHook)
+@makefilter.when_object(QuerysetIterationHook)
 def _(filter_class, instance):
     method = getattr(instance, instance.method_name)
-    return filters.QuerysetIterationHook(method)
+    return QuerysetIterationHook(method)
 
 
 

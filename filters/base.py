@@ -9,11 +9,21 @@ class QuerySetFilter(object):
     Filter class also defines operations with other querysets.
     '''
 
+    def __init__(self, wrapped_callable=None):
+        self._wrapped_callable = wrapped_callable # if any
+
     def __and__(self, other):
-        return lambda queryset: self(queryset) & other(queryset)
+        return QuerySetFilter(
+                lambda queryset: self(queryset) & other(queryset))
         
     def __or__(self, other):
-        return lambda queryset: self(queryset) | other(queryset)
+        return QuerySetFilter(
+                lambda queryset: self(queryset) | other(queryset))
+
+    def __call__(self, queryset):
+        if not self._wrapped_callable:
+            raise NotImplementedError()
+        return self._wrapped_callable(queryset)
 
 
 class QFilter(QuerySetFilter):

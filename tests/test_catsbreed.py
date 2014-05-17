@@ -7,6 +7,7 @@ import operator
 from collections import namedtuple
 
 from filters import *
+from containers import MethodFilter
 
 class BareFiltersTests(TestCase):
 
@@ -83,7 +84,8 @@ class BareFiltersTests(TestCase):
             return obj.can_live_with_other_animals
         
         count = self.CatsBreed.objects.count()
-        assert social_cats(self.CatsBreed.objects.all()).count() <= count // 2
+        qs = social_cats(self.CatsBreed.objects.all())
+        assert qs.exists() and qs.count() <= count // 2
     
     def tesT_inversion_for_filter(self, name):
         filtr = self.filters[name]
@@ -110,3 +112,74 @@ class BareFiltersTests(TestCase):
                 for name2 in ('qfilter', 'hunter_skills', 'light_cats'
                 ):
                     yield self.tesT_combinations, name1, name2, op
+
+
+from dec import make_filter
+
+class ContainerFilterTests(TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'catsbreed.settings'
+        django.setup()
+        from main.models import CatsBreed
+        cls.CatsBreed = CatsBreed
+        
+    def test_simplest(self):
+        class Filter1(MethodFilter):
+            
+            def filter__1(self):
+                return Q(name=u'Сиамская')
+        
+        f = Filter1()
+        assert f(self.CatsBreed.objects.all()).count() == 1
+    
+    def test_make_filter(self):
+        
+        class Filter(MethodFilter):
+            @make_filter(ValuesDictFilter, fields_list=['traits__good_hunter'])
+            def filter__nas_i_zdes_neploho_kormyat(self, cat):
+                return cat['traits__good_hunter'] is False
+        
+        f = Filter()
+        qs = f(self.CatsBreed.objects.all())
+        assert qs.exists() and qs.count() < self.CatsBreed.objects.count()
+    
+    def test_iteration_hook(self):
+        class Filter(MethodFilter):
+            
+            @make_filter(QuerysetIterationHook)
+            def filter__mark(self, cat):
+                cat.selected = True
+
+        f = Filter()
+        qs = f(self.CatsBreed.objects.all())
+        assert all(cat.selected for cat in qs)
+    
+    def test_combine(self):
+        class ManyFilters(MethodFilter):
+            
+            def filter__q(self):
+                return Q(name__in=[u'Сиамская', u'Норвежская лесная'])
+            
+            @make_filter(PropertyBasedFilter,
+                         fields_list=['traits__weight', 'traits__weight_max'], 
+                         properties=['traits.kg'])
+            def filter__big(self, cat):
+                return cat.traits.kg > 5
+            
+            def filter__q_yet_another(self):
+                return Q(name__in=[u'Персидская', u'Норвежская лесная'])
+        
+        filters_and = ManyFilters()
+        qs = filters_and(self.CatsBreed.objects.all())
+        assert qs.count() == 1
+        
+        filters_or = ManyFilters(combine=operator.or_)
+        qs = filters_or(self.CatsBreed.objects.all())
+        assert qs.count() >= 3 and qs.count() < self.CatsBreed.objects.count()
+
+
+
+
+
