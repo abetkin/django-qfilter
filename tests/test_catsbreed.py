@@ -4,6 +4,8 @@ import os
 from django.db.models import Q
 from unittest import TestCase
 
+print 'PP:', os.environ.get('PYTHONPATH')
+
 from filters import *
 
 class BareFiltersTests(TestCase):

@@ -41,16 +41,14 @@ def do_clear():
         print('Nothing to clear')
         
 def do_test():
-#    pypath = os.path.join(_dir, '..')
-    proj_dir = os.path.abspath(os.path.join(_dir, 'build/catsbreed'))
-#    os.chdir(proj_dir)
-    os.environ['PYTHONPATH'] = os.pathsep.join([
-        os.path.abspath(os.path.join(_dir, '..')),
-        proj_dir,
-        os.environ['PYTHONPATH'],
+    pypath = os.pathsep.join(os.path.abspath(p) for p in [
+        os.path.join(_dir, '..'),
+        os.path.join(_dir, 'build/catsbreed') # project dir
     ])
-    
-#    !PYTHONPATH={pypath}; nose2 catsbreed
+    if os.environ.get('PYTHONPATH'):
+        os.environ['PYTHONPATH'] = os.pathsep.join([pypath, os.environ['PYTHONPATH']])
+    else:
+        os.environ['PYTHONPATH'] = pypath
     !nose2
 
 if __name__ == '__main__':

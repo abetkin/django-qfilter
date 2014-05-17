@@ -18,15 +18,24 @@ class QuerySetFilter(object):
 
 class QFilter(QuerySetFilter):
 
-    def __init__(self, callabl):
-        self.callable = callabl
-    
+    def __init__(self, get_q):
+        if isinstance(get_q, Q):
+            self.get_q = lambda queryset: get_q
+        else:
+            assert hasattr(get_q, '__call__')
+            self.get_q = get_q
+
     def __call__(self, queryset):
-        return_value = self.callable(queryset)
-        if isinstance(return_value, Q):
-            return queryset.filter(return_value)
-        assert isinstance(return_value, query.QuerySet)
-        return return_value
+        return_value = self.get_q(queryset)
+        assert isinstance(return_value, Q), (
+                "%s should return a Q instance" % self.get_q.__name__)
+        return queryset.filter(return_value)
+
+    def __invert__(self):
+        def inverted_q(queryset, get_q=self.get_q):
+            return ~get_q(queryset)
+        self.get_q = inverted_q
+        return self
 
 
 class QuerysetIterationHook(QuerySetFilter):
@@ -60,15 +69,6 @@ class QuerysetIterationHook(QuerySetFilter):
         queryset.__class__ = QuerysetWrapper
         return queryset
 
-#%%
-
-class LazyOperator(object):
-    '''
-    like `and`: f() and g() # g might not get executed
-    '''
-    #TODO
-
-#%%
 
 class CallablesList(list):
     
@@ -101,7 +101,7 @@ class CallablesList(list):
 
 #%%
 
-class ValuesDictFilter(QuerySetFilter):
+class ValuesDictFilter(QFilter):
     
     def __new__(cls, *args, **kw):
         if args == ('@',):
@@ -139,9 +139,9 @@ class ValuesDictFilter(QuerySetFilter):
         fields_list = ['pk'] + self.fields_list
         return queryset.values(*fields_list)
     
-    def __call__(self, queryset):
+    def get_q(self, queryset):
         objects = self._fetch_objects(queryset)
         get_pk = lambda obj: getattr(obj, 'pk', None) or obj['pk']
         pks = [get_pk(obj) for obj in objects
                          if self.filter_func(obj)]
-        return queryset.filter(pk__in=pks)
+        return Q(pk__in=pks)

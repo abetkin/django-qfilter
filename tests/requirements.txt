@@ -1,0 +1,4 @@
+https://www.djangoproject.com/download/1.7.b4/tarball/
+ipython
+docopt
+nose2
