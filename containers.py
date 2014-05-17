@@ -87,6 +87,9 @@ A generic function to create filters from `MethodFilter` instances.
 Is dispatched on `filter_class`.
 '''
 
+# Obviously registering factory functions globally is BAD
+# TODO: move to a class
+
 import filters
 from simplegeneric import generic
 

@@ -3,8 +3,8 @@ import django
 import os
 from django.db.models import Q
 from unittest import TestCase
-
-print 'PP:', os.environ.get('PYTHONPATH')
+import operator
+from collections import namedtuple
 
 from filters import *
 
@@ -37,6 +37,13 @@ class BareFiltersTests(TestCase):
         def not_very_good_hunters(obj):
             return obj['traits__good_hunter'] is False
         yield 'hunter_skills', not_very_good_hunters
+        
+        @PropertyBasedFilter('@',
+                 fields_list=['traits__weight', 'traits__weight_max'], 
+                 properties=['traits.kg'])
+        def light_cats(obj):
+            return obj.traits.kg < 3
+        yield 'light_cats', light_cats
     
     def test_QFilter_basic(self):
         f = self.filters['qfilter']
@@ -57,119 +64,49 @@ class BareFiltersTests(TestCase):
         assert qs.count() * 2 <= self.CatsBreed.objects.count()
 
     def test_PropertyBasedFilter(self):
-        @PropertyBasedFilter('@',
-                             fields_list=['traits__weight', 'traits__weight_max'], 
-                             properties=['traits.kg'])
-        def light_cats(obj):
-            return obj.traits.kg < 3
-
+        light_cats = self.filters['light_cats']
         qs = light_cats(self.CatsBreed.objects.all())
         assert qs.exists() and qs.count() < self.CatsBreed.objects.count()
-#%%
-
-
-'TODO: test ~qs'
-
-#
-#(my_filter & filtr)(BankCompany.objects.all())
-
-
-
-
-
-#
-##%%
-#
-##with ipdb.launch_ipdb_on_exception():
-#@ValuesDictFilter(fields_list=[])
-#def filtr(obj):
-#    return obj['pk'] == 11978
-#
-#@ValuesDictFilter(fields_list=['region_list__city_type'])
-#def fname(obj):
-#    return obj['region_list__city_type']
-##    return obj['company_name'] in (u'Альфа-Банк', u'Абсолют Банк', u'Авангард')
-#
-#
-##%%
-#import operator
-#from unicom.crm.models import BankCompany
-#f = filtr & fname
-#f
-#
-##%%
-##BankCompany.objects.get(pk=11978).company_name
-#qs = f(BankCompany.objects.all())
-#qs.count()
-#
-##%%
-#
-#@QuerysetIterationHook
-#def set_hvost(obj):
-#    obj.hvost = 30
-#
-#@QuerysetIterationHook
-#def set_color(obj):
-#    obj.color = 'grey'
-#
-#f = set_color | set_hvost
-#
-##%%
-#
-#qs = f(BankCompany.objects.filter(id=11978))
-#qs[0].color + ' ' + str(qs[0].hvost)
-##%%
-#
-##%%
-#
-#'Init project'
-#
-#import os
-#os.environ['DJANGO_SETTINGS_MODULE'] = 'unicom.settings'
-#
-
-#
-##%%
-#
-#@QFilter
-#def my_filter(queryset):
-#    return BankCompany.objects.filter(id__in=(11949, 11978))
-#
-# Q(id=11978)
-
-#%%
-#
-#(my_filter & filtr)(BankCompany.objects.all())
-#
-###%%
-##'test QFilter'
-##
-##q_filter = QFilter(Q(id=11949))
-##qs = queryset = BankCompany.objects.all()
-##q_filter(qs)
-##
-##%%
-#'test SimpleQuerysetFilter'
-#
-#qs = BankCompany.objects.filter(id=11949)
-#qsfilter = SimpleQuerysetFilter(qs)
-#qsfilter(qs)
-#
-#%%
-#'test ValuesDictFilter'
-#
-#values_filter = ValuesDictFilter([], lambda obj: obj['pk']==11949)
-#values_filter(queryset)
-##%%
-#'test QuerysetIterationHook'
-#
-#qs = BankCompany.objects.all()[:5]
-#def hook_func(obj):
-#    print obj.pk
-#    return obj
-#
-#iter_hook = QuerysetIterationHook(hook_func)
-#nu = iter_hook(qs)
-#nu
-#
-#%%
+    
+    def test_PropertyBasedFilter_exotic(self):
+        
+        class ManyRelatedManager(str):
+            Exists = namedtuple('Exists', ['exists'])
+            
+            def transform(self, pk):
+                return self.Exists(lambda: True) if pk else self.Exists(lambda: False)
+        
+        @PropertyBasedFilter('@',
+                 fields_list=[ManyRelatedManager('can_live_with')], 
+                 properties=['can_live_with_other_animals'])
+        def social_cats(obj):
+            return obj.can_live_with_other_animals
+        
+        count = self.CatsBreed.objects.count()
+        assert social_cats(self.CatsBreed.objects.all()).count() <= count // 2
+    
+    def tesT_inversion_for_filter(self, name):
+        filtr = self.filters[name]
+        qs_all = self.CatsBreed.objects.all()
+        filtered = filtr(qs_all)
+        rest = (~filtr)(qs_all)
+        assert filtered.count() + rest.count() == qs_all.count()
+    
+    def test_invertion(self):
+        for name in 'qfilter', 'hunter_skills', 'light_cats':
+            yield self.tesT_inversion_for_filter, name
+    
+    def tesT_combinations(self, name1, name2, op):
+        f = self.filters[name1]
+        g = self.filters[name2]
+        combined = op(f, g)
+        qs_all = self.CatsBreed.objects.all()
+        assert combined(qs_all).count() == op(f(qs_all), g(qs_all)).count()
+    
+    def test_combinations(self):
+        for op in (operator.and_, operator.or_):
+            for name1 in ('qfilter', 'hunter_skills', 'light_cats'
+            ):
+                for name2 in ('qfilter', 'hunter_skills', 'light_cats'
+                ):
+                    yield self.tesT_combinations, name1, name2, op

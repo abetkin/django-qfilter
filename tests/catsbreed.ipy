@@ -49,7 +49,7 @@ def do_test():
         os.environ['PYTHONPATH'] = os.pathsep.join([pypath, os.environ['PYTHONPATH']])
     else:
         os.environ['PYTHONPATH'] = pypath
-    !nose2
+    !nose2 #-D
 
 if __name__ == '__main__':
     args = docopt(__doc__)

@@ -3,7 +3,7 @@ from itertools import groupby
 
 from .base import ValuesDictFilter
 
-class Attribute(object):
+class _Attribute(object):
 
     _empty = True # does not contain other attributes
 
@@ -16,8 +16,14 @@ class Attribute(object):
         fields_list = filter(None, fields_list)
         if not fields_list:
             return cls
-        result = type('%s_%s' % (parent_field or 'root', cls.__name__),
+        if parent_field:
+            result = type('%s_%s' % (parent_field, cls.__name__),
                           (cls,), {})
+        else:
+            class Object(cls):
+                def __getitem__(self, item):
+                    return self._dict[item]
+            result = Object
         head__tail = [field.partition('__') for field in fields_list]
         
         for head, head__tail in groupby(head__tail, key=lambda t: t[0]):
@@ -53,9 +59,20 @@ class PropertyBasedFilter(ValuesDictFilter):
         if properties:
             self.properties = properties
     
+    def __mod__(self, other):
+        if not isinstance(other, ValuesDictFilter):
+            return NotImplemented
+        fields_list=self.fields_list + other.fields_list
+        properties = set(self.properties)
+        if isinstance(other, PropertyBasedFilter):
+            properties |= set(other.properties)
+        return self.__class__(None, fields_list, properties)
+    
+    __rmod__ = __mod__
+    
     def _fetch_objects(self, queryset):
         fields_list = ['pk'] + self.fields_list
-        Object = Attribute.make_class_from_fields_list(fields_list)
+        Object = _Attribute.make_class_from_fields_list(fields_list)
         
         def get_related_model(model, field_name):
             return getattr(model, field_name).field.related.parent_model

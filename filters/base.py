@@ -17,6 +17,11 @@ class QuerySetFilter(object):
 
 
 class QFilter(QuerySetFilter):
+    '''
+    Wraps a Q instance or a callable that produces it.
+    
+    Supports invertion (~).
+    '''
 
     def __init__(self, get_q):
         if isinstance(get_q, Q):
@@ -118,22 +123,42 @@ class ValuesDictFilter(QFilter):
         if fields_list:
             self.fields_list = list(fields_list)
     
-    def _apply_op(self, operation, other):
-        assert isinstance(other, ValuesDictFilter)
-        fields_list=self.fields_list + other.fields_list
-        filter_func = CallablesList.from_callables(
-                [self.filter_func, other.filter_func], operation)
-        return self.__class__(filter_func, fields_list)
+    def __mod__(self, other):
+        '''
+        For internal use.
+        This operation means: merge 2 filters, i.e., create a new one,
+        initialized with as many attributes of both filters as possible (or makes sense).
+        '''
+        if type(other) == ValuesDictFilter:
+            fields_list=self.fields_list + other.fields_list
+            return self.__class__(None, fields_list)
+        return NotImplemented
     
+    __rmod__ = __mod__
+
     def __and__(self, other):
         if isinstance(other, ValuesDictFilter):
-            return self._apply_op(lambda x, y: x and y, other)
+            try:
+                result = self % other
+            except TypeError:
+                return NotImplemented
+            result.filter_func = CallablesList.from_callables(
+                    [self.filter_func, other.filter_func],
+                    lambda x, y: x and y)
+            return result
         return super(ValuesDictFilter, self).__and__(other)
     
     def __or__(self, other):
         if isinstance(other, ValuesDictFilter):
-            return self._apply_op(lambda x, y: x or y, other)
-        return super(ValuesDictFilter, self).__and__(other)
+            try:
+                result = self % other
+            except TypeError:
+                return NotImplemented
+            result.filter_func = CallablesList.from_callables(
+                    [self.filter_func, other.filter_func],
+                    lambda x, y: x or y)
+            return result
+        return super(ValuesDictFilter, self).__or__(other)
     
     def _fetch_objects(self, queryset):
         fields_list = ['pk'] + self.fields_list
@@ -141,7 +166,6 @@ class ValuesDictFilter(QFilter):
     
     def get_q(self, queryset):
         objects = self._fetch_objects(queryset)
-        get_pk = lambda obj: getattr(obj, 'pk', None) or obj['pk']
-        pks = [get_pk(obj) for obj in objects
+        pks = [obj['pk'] for obj in objects
                          if self.filter_func(obj)]
         return Q(pk__in=pks)
