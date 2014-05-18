@@ -53,7 +53,7 @@ def do_test():
         os.environ['PYTHONPATH'] = os.pathsep.join([pypath, os.environ['PYTHONPATH']])
     else:
         os.environ['PYTHONPATH'] = pypath
-    !nose2 test_catsbreed.BareFiltersTests.test_PropertyBasedFilter_exotic
+    !nose2
     
     'TODO! pass arguments to nose2'
 

@@ -11,7 +11,7 @@ class _Attribute(object):
     def __init__(self, name=None, values_dict=None):
         self.name = name
         self._dict = values_dict
-    
+
     @classmethod
     def make_class_from_fields_list(cls, fields_list, parent_field=None):
         fields_list = filter(None, fields_list)
@@ -23,15 +23,22 @@ class _Attribute(object):
         else:
             transform_dict = {field: field.transform
                               for field in fields_list if hasattr(field, 'transform')}
+            class look_for_transforms(dict):
+                def __getitem__(self, item):
+                    rv = super(look_for_transforms, self).__getitem__(item)
+                    if item not in transform_dict:
+                        return rv
+                    transform = transform_dict[item]
+                    return transform(self, rv)
+            
             class Object(cls):
                 def __getitem__(self, item):
                     return self._dict[item]
-#                def __getattribute__(self, name):
-#                    rv = super(Object, self).__getattribute__(name)
-#                    if name not in transform_dict:
-#                        return rv
-#                    transform = transform_dict[name]
-#                    return transform(self, rv)
+                    
+                def __init__(self, name=None, values_dict=None):
+                    values_dict = values_dict and look_for_transforms(values_dict)
+                    return super(Object, self).__init__(name, values_dict)
+                
             result = Object
         
         head__tail = [field.partition('__') for field in fields_list]
@@ -50,10 +57,7 @@ class _Attribute(object):
     
     def get_value(self):
         assert self._dict and self.name in self._dict, str(self._dict.items()) + str(self.name)
-        value = self._dict[self.name]
-#        if hasattr(self.name, 'transform'):
-#            value = self.name.transform(value)
-        return value
+        return self._dict[self.name]
     
     def __get__(self, instance, owner):
         if not instance:
@@ -98,10 +102,6 @@ class PropertyBasedFilter(ValuesDictFilter):
                 get_attr = lambda cls, name: getattr(cls, name).__class__
                 attribute_class = reduce(get_attr, split_name[:-1], Object)
             prop = getattr(model_class, split_name[-1])
-#            if not hasattr(property_name, 'transform'):
-#                fget = prop.fget
-#            else:
-#                fget = lambda obj: property_name.transform(prop.fget(obj))
             setattr(attribute_class, split_name[-1], property(prop.fget))
         
         objects = queryset.values(*fields_list)
