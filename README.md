@@ -1,15 +1,15 @@
-What is it
+What it is
 =========
 
 Lightweight package for django which does the filtering of django querysets. The central object - a filter - is a callable that takes a queryset as a parameter and returns a queryset:
 
     filtered_queryset = filtr(Model.objects.all())
 
-Django itself has a similar object - Q-object (`django.db.models.Q`). Q-objects can be combined toghether (with |, & operations) or inverted (~) and then passed to `queryset.filter`.
+Django itself has a similar object - Q-object (`django.db.models.Q`). Q-objects can be combined toghether (with `|`, `&` operations) or inverted (`~`) and then passed to `queryset.filter`.
 
-With `qfilters`, what you get in the most common case, is just a wrapper around the Q-object. However there are 2 features that may be the reasons to use the package:
+With `qfilters`, what you get in the most common case, is just a wrapper around the Q-object. However there are __2 features__ that may be the reasons to use the package:
     
-1. Support for additional filter types.
+__1. Support for additional filter types.__
 
 For example, there is `ValuesDictFilter`, that is constructed from a field list, that will be passed to `queryset.values` and retrieve a list of dictionaries, and a filtering function, which accepts that dict as a parameter.
 
