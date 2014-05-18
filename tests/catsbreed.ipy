@@ -9,7 +9,6 @@ The project helps you decide what is the best cat's breed for you.
 
 Usage:
   catsbreed.ipy (init | clear | test)
-  catsbreed.ipy
   
 """
 

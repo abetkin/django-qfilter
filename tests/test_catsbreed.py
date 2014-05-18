@@ -6,8 +6,8 @@ from unittest import TestCase
 import operator
 from collections import namedtuple
 
-from filters import *
-from containers import MethodFilter
+from qfilters import *
+#from containers import MethodFilter
 
 class BareFiltersTests(TestCase):
 
@@ -113,8 +113,6 @@ class BareFiltersTests(TestCase):
                 ):
                     yield self.tesT_combinations, name1, name2, op
 
-
-from dec import make_filter
 
 class ContainerFilterTests(TestCase):
     

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from itertools import groupby
 
-from .base import ValuesDictFilter
+from . import ValuesDictFilter
 
 class _Attribute(object):
 

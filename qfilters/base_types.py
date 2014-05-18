@@ -57,22 +57,21 @@ class QuerysetIterationHook(QuerySetFilter):
     
     def __init__(self, hook_function):
         self.hook_function = hook_function
-
-    def _combine(self, other):
-        #TODO: add support for lazy operations
-        assert isinstance(other, QuerysetIterationHook)
-        hook_function = CallablesList.from_callables(
-                [self.hook_function, other.hook_function], None)
-        return self.__class__(hook_function)
     
     def __and__(self, other):
         if isinstance(other, QuerysetIterationHook):
-            return self._combine(other)
+            # now __and__ and __or__ are identical
+            # TODO: add support for lazy operations
+            return self.__class__(hook_function=CallablesList.from_callables(
+                [self.hook_function, other.hook_function], None))
         return super(QuerysetIterationHook, self).__and__(other)
     
     def __or__(self, other):
         if isinstance(other, QuerysetIterationHook):
-            return self._combine(other)
+            # now __and__ and __or__ are identical
+            # TODO: add support for lazy operations
+            return self.__class__(hook_function=CallablesList.from_callables(
+                [self.hook_function, other.hook_function], None))
         return super(QuerysetIterationHook, self).__or__(other)
     
     def __call__(self, queryset):
