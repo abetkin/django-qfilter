@@ -13,7 +13,7 @@ def fill_dogs(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        (b'main', b'0002_fill_cat_breeds'),
+        ('main', '0002_fill_cat_breeds'),
     ]
 
     operations = [

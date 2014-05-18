@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import operator
-from qfilters import (QFilter, ValuesDictFilter, QuerysetIterationHook,
+from functools import reduce
+from . import (QFilter, ValuesDictFilter, QuerysetIterationHook,
                      PropertyBasedFilter)
 
 
@@ -15,7 +16,7 @@ class MethodFilter(object):
     def __new__(cls, method_name=None, *args, **kw):
         if not method_name:
             return FilterContainer(cls, *args, **kw)
-        return super(MethodFilter, cls).__new__(cls, method_name, *args, **kw)
+        return super(MethodFilter, cls).__new__(cls)
 
     def __init__(self, method_name, context={}):
         self.method_name = method_name
@@ -37,14 +38,9 @@ class MethodFilter(object):
         return self._filter(queryset)
     
     def __and__(self, other):
-        #FIXME
-#        if not isinstance(other, QuerySetFilter):
-#            other = other._filter
         return self._filter & other
     
     def __or__(self, other):
-#        if not isinstance(other, QuerySetFilter):
-#            other = other._filter
         return self._filter | other
 
     ##

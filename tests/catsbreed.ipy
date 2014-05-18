@@ -8,7 +8,7 @@ The project helps you decide what is the best cat's breed for you.
 
 
 Usage:
-  catsbreed.ipy (init | clear | test)
+  catsbreed.ipy (init | clean | test)
   
 """
 
@@ -17,7 +17,6 @@ from docopt import docopt
 import zipfile
 import re
 
-_dir = os.path.dirname(__file__)
 
 def do_init():
     print('== init catsbreed project ==')
@@ -28,16 +27,21 @@ def do_init():
         !cp -r projects/catsbreed ./build
         os.chdir('build/catsbreed')
         !find . -name '*.sqlite3' -delete
-        !./manage.py makemigrations
+        # make migrations
+        !mv main/migrations main/_migrations
+        !./manage.py makemigrations main
+        !mv main/_migrations/* main/migrations -n
+        !rm -rf main/_migrations
+        # migrate
         !./manage.py migrate
     else:
         os.chdir('build/catsbreed')
 
-def do_clear():
+def do_clean():
     if os.path.exists('build/catsbreed'):
         !rm -rf build/catsbreed
     else:
-        print('Nothing to clear')
+        print('Nothing to clean')
         
 def do_test():
     pypath = os.pathsep.join(os.path.abspath(p) for p in [
@@ -53,10 +57,12 @@ def do_test():
 if __name__ == '__main__':
     args = docopt(__doc__)
     
+    _dir = os.path.dirname(__file__) or '.'
     os.chdir(_dir)
+
     if args['init']:
         do_init()
-    elif args['clear']:
-        do_clear()
+    elif args['clean']:
+        do_clean()
     elif args['test']:
         do_test()

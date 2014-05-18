@@ -107,7 +107,7 @@ def breed_vs_traits():
 class Migration(migrations.Migration):
 
     dependencies = [
-        (b'main', b'0001_initial'),
+        ('main', '0001_initial'),
     ]
 
     operations = [

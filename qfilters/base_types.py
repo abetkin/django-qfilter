@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from django.db.models import Q, query
-
+from functools import reduce
 
 class QuerySetFilter(object):
     '''
@@ -125,7 +125,7 @@ class ValuesDictFilter(QFilter):
                 obj.__dict__.update(kw)
                 return obj
             return newobj
-        return super(ValuesDictFilter, cls).__new__(cls, *args, **kw)
+        return super(ValuesDictFilter, cls).__new__(cls)
     
     def __init__(self, filter_func, fields_list=None):
         self.filter_func = filter_func

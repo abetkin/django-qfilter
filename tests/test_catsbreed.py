@@ -6,8 +6,8 @@ from unittest import TestCase
 import operator
 from collections import namedtuple
 
+
 from qfilters import *
-#from containers import MethodFilter
 
 class BareFiltersTests(TestCase):
 
@@ -43,7 +43,7 @@ class BareFiltersTests(TestCase):
                  fields_list=['traits__weight', 'traits__weight_max'], 
                  properties=['traits.kg'])
         def light_cats(obj):
-            return obj.traits.kg < 3
+            return obj.traits.kg and obj.traits.kg < 3
         yield 'light_cats', light_cats
     
     def test_QFilter_basic(self):
@@ -164,7 +164,7 @@ class ContainerFilterTests(TestCase):
                          fields_list=['traits__weight', 'traits__weight_max'], 
                          properties=['traits.kg'])
             def filter__big(self, cat):
-                return cat.traits.kg > 5
+                return cat.traits.kg and cat.traits.kg > 5
             
             def filter__q_yet_another(self):
                 return Q(name__in=[u'Персидская', u'Норвежская лесная'])

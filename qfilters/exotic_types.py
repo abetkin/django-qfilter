@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from itertools import groupby
+from functools import reduce
 
 from . import ValuesDictFilter
 
