@@ -14,7 +14,7 @@ class _Attribute(object):
 
     @classmethod
     def make_class_from_fields_list(cls, fields_list, parent_field=None):
-        fields_list = filter(None, fields_list)
+        fields_list = list(filter(None, fields_list))
         if not fields_list:
             return cls
         if parent_field:
@@ -23,19 +23,20 @@ class _Attribute(object):
         else:
             transform_dict = {field: field.transform
                               for field in fields_list if hasattr(field, 'transform')}
-            class look_for_transforms(dict):
-                def __getitem__(self, item):
-                    rv = super(look_for_transforms, self).__getitem__(item)
-                    if item not in transform_dict:
-                        return rv
-                    transform = transform_dict[item]
-                    return transform(self, rv)
-            
             class Object(cls):
                 def __getitem__(self, item):
                     return self._dict[item]
                     
                 def __init__(self, name=None, values_dict=None):
+                    
+                    class look_for_transforms(dict):
+                        def __getitem__(this, item):
+                            rv = super(look_for_transforms, this).__getitem__(item)
+                            if item not in transform_dict:
+                                return rv
+                            transform = transform_dict[item]
+                            return transform(self, rv)
+                    
                     values_dict = values_dict and look_for_transforms(values_dict)
                     return super(Object, self).__init__(name, values_dict)
                 
