@@ -1,7 +1,6 @@
-What it is
-=========
+__What it is:__
 
-Lightweight package for django which does the filtering of django querysets. The central object - a filter - is a callable that takes a queryset as a parameter and returns a queryset:
+A lightweight package for django which does the filtering of django querysets. The central object - a filter - is a callable that takes a queryset as a parameter and returns a queryset:
 
     filtered_queryset = filtr(Model.objects.all())
 
