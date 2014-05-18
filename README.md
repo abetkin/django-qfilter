@@ -52,10 +52,10 @@ There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIteration
     
     assert light_cats(CatsBreed.objects.all()).exists()
 
-__2.Using class as container: methods are filters__
+__2. Using class as container: methods are filters__
 
 It is convenient to have an object, which can hold some context (for example, the view itself),
-and let the filters be the methods, which can access this context. `qfilters.containers` provide this functionality, specifically, there is a `MethodFilter` class:
+and let the methods be filters, and be able to access this context. `qfilters.containers` provide this functionality, specifically, there is a `MethodFilter` class:
     
     from qfilter import MethodFilter
     
