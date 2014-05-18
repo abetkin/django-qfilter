@@ -15,7 +15,7 @@ For example, there is `ValuesDictFilter`, that is constructed from a field list,
 
 This filters can be combined or inverted in the same way Q-objects do, so that using multiple filters would result in a single call to `queryset.values`.
 
-This is what it looks like in practice (all examples are taken from `qfilter` testsuite):
+This is what it looks like in practice (all examples are taken from the `qfilter` testsuite):
       
     @ValuesDictFilter('@', fields_list=['traits__good_hunter'])
     def nas_i_zdes_neploho_kormyat(obj):
@@ -37,6 +37,7 @@ There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIteration
         # if you can't specify min and max 
         weight = models.FloatField(u'Вес, кг', null=True)
 
+        @property
         def kg(self):
             return self.weight or self.weight_max
     
@@ -51,5 +52,28 @@ There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIteration
     
     assert light_cats(CatsBreed.objects.all()).exists()
 
+__2.Using class as container: methods are filters__
 
+It is convenient to have an object, which can hold some context (for example, the view itself),
+and let the filters be the methods, which can access this context. `qfilters.containers` provide this functionality, specifically, there is a `MethodFilter` class:
+    
+    from qfilter import MethodFilter
+    
+    class ManyFilters(MethodFilter):
+        
+        def filter__q(self):
+            return Q(name__in=[u'Сиамская', u'Норвежская лесная'])
+        
+        @make_filter(PropertyBasedFilter,
+                     fields_list=['traits__weight', 'traits__weight_max'], 
+                     properties=['traits.kg'])
+        def filter__big(self, cat):
+            return cat.traits.kg and cat.traits.kg > 5
+        
+        def filter__q_yet_another(self):
+            return Q(name__in=[u'Персидская', u'Норвежская лесная'])
+    
+    filters = ManyFilters()
+    cat = filters(CatsBreed.objects.all())[0]
 
+The idea was born from the experience of using the [django-rest-framework](http://www.django-rest-framework.org/). There is a notion of filter backend (a class) which every view knows about. First I implemented a simple method-based filter backend, the possible return values for the methods were eiher Q-object or a queryset. But then I got some difficulties with debugging since a return value doesn't even know which method it came from. Thus, I decided it will be a good idea to have this filter obbject.
