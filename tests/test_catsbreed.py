@@ -43,7 +43,7 @@ class BareFiltersTests(TestCase):
                  fields_list=['traits__weight', 'traits__weight_max'], 
                  properties=['traits.kg'])
         def light_cats(obj):
-            return obj.traits.kg and obj.traits.kg < 3
+            return not obj.traits.kg or obj.traits.kg < 3
         yield 'light_cats', light_cats
     
     def test_QFilter_basic(self):
@@ -74,8 +74,8 @@ class BareFiltersTests(TestCase):
         class ManyRelatedManager(str):
             Exists = namedtuple('Exists', ['exists'])
             
-            def transform(self, pk):
-                return self.Exists(lambda: True) if pk else self.Exists(lambda: False)
+            def transform(self, attr, value):
+                return self.Exists(lambda: True) if value else self.Exists(lambda: False)
         
         @PropertyBasedFilter('@',
                  fields_list=[ManyRelatedManager('can_live_with')], 
