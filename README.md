@@ -1,3 +1,9 @@
+__Installation:__
+
+    pip install qfilters
+    
+Works both with Python 2 and Python 3.
+
 __What it is:__
 
 A lightweight package for django which does the filtering of django querysets. The central object - a filter - is a callable that takes a queryset as a parameter and returns a queryset:
