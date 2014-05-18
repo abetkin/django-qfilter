@@ -76,6 +76,6 @@ and let the methods be filters, and be able to access this context. `qfilters.co
     filters = ManyFilters()
     cat = filters(CatsBreed.objects.all())[0]
 
-The idea was born from the experience of using the [django-rest-framework](http://www.django-rest-framework.org/). There is a notion of filter backend (a class) which every view knows about. First I implemented a simple method-based filter backend, the possible return values for the methods were eiher Q-object or a queryset. But then I got some difficulties with debugging since a return value doesn't even know which method it came from. Thus, I decided it will be a good idea to have this filter obbject.
+The idea was born from the experience of using the [django-rest-framework](http://www.django-rest-framework.org/). There is a notion of filter backend (a class) which every view knows about. First I implemented a simple method-based filter backend, the possible return values for the methods were eiher a Q-object or a queryset. But then I got difficulties with debugging since the return value doesn't even know which method it came from. Thus, I decided it will be a good idea to have this filter obbject.
 
 P.S. `qfilters` does not provide a filter backend to use with django-rest-framework, but it's a piece of cake to write one.
