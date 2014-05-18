@@ -2,7 +2,42 @@
 from itertools import groupby
 from functools import reduce
 
-from . import ValuesDictFilter
+from . import QuerySetFilter, ValuesDictFilter
+from .utils import CallablesList
+
+
+
+class QuerysetIterationHook(QuerySetFilter):
+    
+    def __init__(self, hook_function):
+        self.hook_function = hook_function
+    
+    def __and__(self, other):
+        if isinstance(other, QuerysetIterationHook):
+            # now __and__ and __or__ are identical
+            # TODO: add support for lazy operations
+            return self.__class__(hook_function=CallablesList.from_callables(
+                [self.hook_function, other.hook_function], None))
+        return super(QuerysetIterationHook, self).__and__(other)
+    
+    def __or__(self, other):
+        if isinstance(other, QuerysetIterationHook):
+            # now __and__ and __or__ are identical
+            # TODO: add support for lazy operations
+            return self.__class__(hook_function=CallablesList.from_callables(
+                [self.hook_function, other.hook_function], None))
+        return super(QuerysetIterationHook, self).__or__(other)
+    
+    def __call__(self, queryset):
+        class QuerysetWrapper(type(queryset)):
+            def iterator(this):
+                for obj in super(QuerysetWrapper, this).iterator():
+                    self.hook_function(obj) #TODO: maybe let it throw exception
+                    yield obj
+        queryset.__class__ = QuerysetWrapper
+        return queryset
+
+
 
 class _Attribute(object):
 
