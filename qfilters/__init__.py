@@ -1,5 +1,7 @@
 #
 
+__version__ = 0.1
+
 from .base_types import QuerySetFilter, QFilter, QuerysetIterationHook, ValuesDictFilter
 from .exotic_types import PropertyBasedFilter
 from .containers import MethodFilter

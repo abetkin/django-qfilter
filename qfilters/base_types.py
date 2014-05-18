@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from django.db.models import Q, query
+#from django.db.models import Q, query
 from functools import reduce
 
 class QuerySetFilter(object):
@@ -34,6 +34,7 @@ class QFilter(QuerySetFilter):
     '''
 
     def __init__(self, get_q):
+        from django.db.models import Q
         if isinstance(get_q, Q):
             self.get_q = lambda queryset: get_q
         else:
@@ -42,6 +43,7 @@ class QFilter(QuerySetFilter):
 
     def __call__(self, queryset):
         return_value = self.get_q(queryset)
+        from django.db.models import Q
         assert isinstance(return_value, Q), (
                 "%s should return a Q instance" % self.get_q.__name__)
         return queryset.filter(return_value)
@@ -177,4 +179,5 @@ class ValuesDictFilter(QFilter):
         objects = self._fetch_objects(queryset)
         pks = [obj['pk'] for obj in objects
                          if self.filter_func(obj)]
+        from django.db.models import Q
         return Q(pk__in=pks)
