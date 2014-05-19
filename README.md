@@ -16,7 +16,7 @@ With `qfilters`, what you get in the most common case, is just a wrapper around 
     
 __1. Support for additional filter types.__
 
-For example, there is `ValuesDictFilter`, that is constructed from a field list, that will be passed to `queryset.values` and retrieve a list of dictionaries, and a filtering function, which accepts that dict as a parameter.
+For example, there is `ValuesDictFilter`, which is constructed from a field list, that is passed to `queryset.values` and retrieve a list of dictionaries, and a filtering function, which accepts that dict as a parameter.
 
 This filters can be combined or inverted in the same way Q-objects do, so that using multiple filters would result in a single call to `queryset.values`.
 
@@ -29,7 +29,7 @@ This is what it looks like in practice (all examples are taken from the `qfilter
     cats = nas_i_zdes_neploho_kormyat(self.CatsBreed.objects.all())
     assert cats.exists()
     
-There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIterationHook`, which appends attributes to objects when queryset is iterated over. Another one is `PropertyBasedFilter`, which can access object's attributes and even properties like it were a regular django model object. The implementation is not very straightforward, still it passes the tests so far. Here is what it looks like:
+There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIterationHook`, which appends attributes to objects when queryset is iterated over. Another one is `PropertyBasedFilter`, which can access object's attributes and even properties as if it were a regular django model object. The implementation is not very straightforward, still it passes the tests so far. Here is what it looks like:
     
     class CatsBreed(models.Model):
         # ...
