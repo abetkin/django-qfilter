@@ -56,7 +56,26 @@ class MethodFilter(object):
     def _get_methods_names(cls):
         attrs = dir(cls)
         return filter(lambda name: cls.is_filter_method(name), attrs)
+#%%
+def mro_distance(cls, other):
+    for i, parent in enumerate(cls.__mro__):
+        if parent in other.__mro__:
+            break
+    return max(i, other.__mro__.index(parent))
+#%%
+class A(object):
+    1
 
+class D(A):
+    1
+ 
+class B(A):
+    1
+class C(B):
+    1   
+mro_distance(C, B)
+
+#%% 
 
 class FilterContainer(object):
     '''
@@ -77,10 +96,11 @@ class FilterContainer(object):
         return iter(self._filters)
     
     def __call__(self, queryset):
-        if self._filters:
-            combined = reduce(self.combine, self._filters)
-            return combined(queryset)
-        return queryset
+        if not self._filters:
+            return queryset
+        combined = reduce(self.combine, self._filters)
+        return combined(queryset)
+        
     
 
 
