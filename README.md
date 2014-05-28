@@ -10,13 +10,13 @@ A lightweight package for django which does the filtering of django querysets. T
 
     filtered_queryset = filtr(Model.objects.all())
 
-Django itself has a similar object - Q-object (`django.db.models.Q`). Q-objects can be combined toghether (with `|`, `&` operations) or inverted (`~`) and then passed to `queryset.filter`.
+Django itself has a similar object - Q-object (`django.db.models.Q`). Q-objects can be combined together (with `|`, `&` operations) or inverted (`~`) and then passed to `queryset.filter`.
 
 With `qfilters`, what you get in the most common case, is just a wrapper around the Q-object. However there are __2 features__ that may be the reasons to use the package:
     
 __1. Support for additional filter types.__
 
-For example, there is `ValuesDictFilter`, that is constructed from a field list, that will be passed to `queryset.values` and retrieve a list of dictionaries, and a filtering function, which accepts that dict as a parameter.
+For example, there is `ValuesDictFilter`, which is constructed from a field list, that is passed to `queryset.values` and retrieve a list of dictionaries, and a filtering function, which accepts that dict as a parameter.
 
 This filters can be combined or inverted in the same way Q-objects do, so that using multiple filters would result in a single call to `queryset.values`.
 
@@ -29,7 +29,7 @@ This is what it looks like in practice (all examples are taken from the `qfilter
     cats = nas_i_zdes_neploho_kormyat(self.CatsBreed.objects.all())
     assert cats.exists()
     
-There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIterationHook`, which appends attributes to objects when queryset is iterated over. Another one is `PropertyBasedFilter`, which can access object's attributes and even properties like it were a regular django model object. The implementation is not very straightforward, still it passes the tests so far. Here is what it looks like:
+There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIterationHook`, which appends attributes to objects when queryset is iterated over. Another one is `PropertyBasedFilter`, which can access object's attributes and even properties as if it were a regular django model object. The implementation is not very straightforward, still it passes the tests so far. Here is what it looks like:
     
     class CatsBreed(models.Model):
         # ...
@@ -57,7 +57,7 @@ There are also exotic variants (`qfilters.exotic_types`) like `QuerysetIteration
     
     assert light_cats(CatsBreed.objects.all()).exists()
 
-__2. Using class as container: methods are filters__
+__2. Using class as a container: methods are filters__
 
 It is convenient to have an object, which can hold some context (for example, the view itself),
 and let the methods be filters, and be able to access this context. `qfilters.containers` provide this functionality, specifically, there is a `MethodFilter` class:
@@ -81,6 +81,6 @@ and let the methods be filters, and be able to access this context. `qfilters.co
     filters = ManyFilters()
     cat = filters(CatsBreed.objects.all())[0]
 
-The idea was born from the experience of using the [django-rest-framework](http://www.django-rest-framework.org/). There is a notion of filter backend (a class) which every view knows about. First I implemented a simple method-based filter backend, the possible return values for the methods were eiher a Q-object or a queryset. But then I got difficulties with debugging since the return value doesn't even know which method it came from. Thus, I decided it will be a good idea to have this filter obbject.
+The idea was born from the experience of using the [django-rest-framework](http://www.django-rest-framework.org/). There is a notion of filter backend (a class) which every view knows about. First I implemented a simple method-based filter backend, the possible return values for the methods were eiher a Q-object or a queryset. But then I got difficulties with debugging since the return value doesn't even know which method it came from. Thus, I decided it will be a good idea to have this filter object.
 
 P.S. `qfilters` does not provide a filter backend to use with django-rest-framework, but it's a piece of cake to write one.
