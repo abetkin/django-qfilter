@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from functools import reduce
+
 class CallablesList(list):
     
     def __init__(self, *args, **kw):

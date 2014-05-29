@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from itertools import groupby
 import operator
 from functools import reduce
 from . import (QFilter, ValuesDictFilter, QuerysetIterationHook,
@@ -56,26 +57,7 @@ class MethodFilter(object):
     def _get_methods_names(cls):
         attrs = dir(cls)
         return filter(lambda name: cls.is_filter_method(name), attrs)
-#%%
-def mro_distance(cls, other):
-    for i, parent in enumerate(cls.__mro__):
-        if parent in other.__mro__:
-            break
-    return max(i, other.__mro__.index(parent))
-#%%
-class A(object):
-    1
 
-class D(A):
-    1
- 
-class B(A):
-    1
-class C(B):
-    1   
-mro_distance(C, B)
-
-#%% 
 
 class FilterContainer(object):
     '''
@@ -98,11 +80,14 @@ class FilterContainer(object):
     def __call__(self, queryset):
         if not self._filters:
             return queryset
-        combined = reduce(self.combine, self._filters)
-        return combined(queryset)
+        def keyfunc(filtr):
+            # group filters by class
+            return getattr(filtr.__class__, 'name', None) or filtr.__class__
+        filters = [reduce(self.combine, group)
+                   for class_name, group in groupby(self._filters, keyfunc)]
+        filtr = reduce(self.combine, filters)
+        return filtr(queryset)
         
-    
-
 
 '''
 A generic function to create filters from `MethodFilter` instances.
