@@ -16,7 +16,7 @@ class QuerySetFilter(object):
     def __and__(self, other):
         return QuerySetFilter(
                 lambda queryset: self(queryset) & other(queryset))
-        
+
     def __or__(self, other):
         return QuerySetFilter(
                 lambda queryset: self(queryset) | other(queryset))
@@ -30,7 +30,7 @@ class QuerySetFilter(object):
 class QFilter(QuerySetFilter):
     '''
     Wraps a Q instance or a callable that produces it.
-    
+
     Supports invertion (~).
     '''
 
@@ -57,22 +57,20 @@ class QFilter(QuerySetFilter):
 
 
 class ValuesDictFilter(QFilter):
-    
-    def __new__(cls, *args, **kw):
-        if args == ('@',):
-            # this is reserved for using class as decorator
-            def newobj(func):
-                obj = cls(func)
-                obj.__dict__.update(kw)
-                return obj
-            return newobj
-        return super(ValuesDictFilter, cls).__new__(cls)
-    
-    def __init__(self, filter_func, fields_list=None):
+
+    filter_func = None
+
+    def __call__(self, *args, **kw):
+        if not self.filter_func:
+            self.filter_func = args[0]
+            return self
+        return super(ValuesDictFilter, self).__call__(*args, **kw)
+
+    def __init__(self, fields_list=None, filter_func=None):
         self.filter_func = filter_func
         if fields_list:
             self.fields_list = list(fields_list)
-    
+
     def __mod__(self, other):
         '''
         For internal use.
@@ -81,9 +79,9 @@ class ValuesDictFilter(QFilter):
         '''
         if type(other) == ValuesDictFilter:
             fields_list=self.fields_list + other.fields_list
-            return self.__class__(None, fields_list)
+            return self.__class__(fields_list)
         return NotImplemented
-    
+
     __rmod__ = __mod__
 
     def __and__(self, other):
@@ -97,7 +95,7 @@ class ValuesDictFilter(QFilter):
                     lambda x, y: x and y)
             return result
         return super(ValuesDictFilter, self).__and__(other)
-    
+
     def __or__(self, other):
         if isinstance(other, ValuesDictFilter):
             try:
@@ -109,11 +107,11 @@ class ValuesDictFilter(QFilter):
                     lambda x, y: x or y)
             return result
         return super(ValuesDictFilter, self).__or__(other)
-    
+
     def _fetch_objects(self, queryset):
         fields_list = ['pk'] + self.fields_list
         return queryset.values(*fields_list)
-    
+
     def get_q(self, queryset):
         objects = self._fetch_objects(queryset)
         pks = [obj['pk'] for obj in objects

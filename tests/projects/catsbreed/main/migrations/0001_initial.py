@@ -1,4 +1,4 @@
-# encoding: utf8
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
 from django.db import models, migrations
@@ -11,50 +11,60 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name=b'Traits',
+            name='Animal',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                (b'good_hunter', models.NullBooleanField()),
-                (b'weight_min', models.FloatField(null=True, verbose_name='\u0412\u0435\u0441 \u043e\u0442, \u043a\u0433')),
-                (b'weight_max', models.FloatField(null=True, verbose_name='\u0412\u0435\u0441 \u0434\u043e, \u043a\u0433')),
-                (b'weight', models.FloatField(null=True, verbose_name='\u0412\u0435\u0441, \u043a\u0433')),
-                (b'text', models.CharField(max_length=1000, null=True, verbose_name='\u041e\u0442\u043b\u0438\u0447\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0435 \u0447\u0435\u0440\u0442\u044b \u0432 \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u043e\u0439 \u0444\u043e\u0440\u043c\u0435')),
+                ('id', models.AutoField(auto_created=True, verbose_name='ID', primary_key=True, serialize=False)),
+                ('weight', models.FloatField(verbose_name='Вес, кг', null=True)),
             ],
             options={
             },
             bases=(models.Model,),
         ),
         migrations.CreateModel(
-            name=b'Animal',
+            name='CatsBreed',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                (b'weight', models.FloatField(null=True, verbose_name='\u0412\u0435\u0441, \u043a\u0433')),
+                ('id', models.AutoField(auto_created=True, verbose_name='ID', primary_key=True, serialize=False)),
+                ('name', models.CharField(max_length=20)),
+                ('fur', models.CharField(choices=[('К', 'Короткошёрстная'), ('Д', 'Длинношёрстная'), ('С', 'Сфинкс')], max_length=20, verbose_name='Тип шерсти')),
             ],
             options={
             },
             bases=(models.Model,),
         ),
         migrations.CreateModel(
-            name=b'CatsBreed',
+            name='Dog',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                (b'name', models.CharField(max_length=20)),
-                (b'fur', models.CharField(max_length=20, verbose_name='\u0422\u0438\u043f \u0448\u0435\u0440\u0441\u0442\u0438', choices=[('\u041a', '\u041a\u043e\u0440\u043e\u0442\u043a\u043e\u0448\u0451\u0440\u0441\u0442\u043d\u0430\u044f'), ('\u0414', '\u0414\u043b\u0438\u043d\u043d\u043e\u0448\u0451\u0440\u0441\u0442\u043d\u0430\u044f'), ('\u0421', '\u0421\u0444\u0438\u043d\u043a\u0441')])),
-                (b'traits', models.OneToOneField(to=b'main.Traits', to_field='id')),
-                (b'can_live_with', models.ManyToManyField(to=b'main.Animal', null=True)),
+                ('animal_ptr', models.OneToOneField(to='main.Animal', parent_link=True, auto_created=True, serialize=False, primary_key=True)),
+                ('breed', models.CharField(max_length=20)),
+            ],
+            options={
+            },
+            bases=('main.animal',),
+        ),
+        migrations.CreateModel(
+            name='Traits',
+            fields=[
+                ('id', models.AutoField(auto_created=True, verbose_name='ID', primary_key=True, serialize=False)),
+                ('good_hunter', models.NullBooleanField()),
+                ('weight_min', models.FloatField(verbose_name='Вес от, кг', null=True)),
+                ('weight_max', models.FloatField(verbose_name='Вес до, кг', null=True)),
+                ('weight', models.FloatField(verbose_name='Вес, кг', null=True)),
+                ('text', models.CharField(max_length=1000, verbose_name='Отличительные черты в свободной форме', null=True)),
             ],
             options={
             },
             bases=(models.Model,),
         ),
-        migrations.CreateModel(
-            name=b'Dog',
-            fields=[
-                ('animal_ptr', models.OneToOneField(auto_created=True, primary_key=True, to_field='id', serialize=False, to=b'main.Animal')),
-                (b'breed', models.CharField(max_length=20)),
-            ],
-            options={
-            },
-            bases=(b'main.animal',),
+        migrations.AddField(
+            model_name='catsbreed',
+            name='can_live_with',
+            field=models.ManyToManyField(to='main.Animal', null=True),
+            preserve_default=True,
+        ),
+        migrations.AddField(
+            model_name='catsbreed',
+            name='traits',
+            field=models.OneToOneField(to='main.Traits'),
+            preserve_default=True,
         ),
     ]

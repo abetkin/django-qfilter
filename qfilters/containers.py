@@ -11,7 +11,7 @@ class MethodFilter(object):
     '''
     Allows to create filter instances from methods.
     '''
-    
+
     _filter = None
 
     def __new__(cls, method_name=None, *args, **kw):
@@ -37,10 +37,10 @@ class MethodFilter(object):
 
     def __call__(self, queryset):
         return self._filter(queryset)
-    
+
     def __and__(self, other):
         return self._filter & other
-    
+
     def __or__(self, other):
         return self._filter | other
 
@@ -48,7 +48,7 @@ class MethodFilter(object):
 
     def __repr__(self):
         return '%s (%s)' % (self.method_name, self._filter.__class__)
-    
+
     @classmethod
     def is_filter_method(cls, name):
         return name.startswith('filter__')
@@ -63,9 +63,9 @@ class FilterContainer(object):
     '''
     Container for `MethodFilter`s (from now on: "items").
     '''
-    
+
     combine = operator.and_
-    
+
     def __init__(self, items_class, *args, **kw):
         if 'combine' in kw:
             self.combine = kw.pop('combine')
@@ -73,10 +73,10 @@ class FilterContainer(object):
         for method_name in items_class._get_methods_names():
             self._filters.append(
                     items_class(method_name=method_name, *args, **kw))
-    
+
     def __iter__(self):
         return iter(self._filters)
-    
+
     def __call__(self, queryset):
         if not self._filters:
             return queryset
@@ -87,7 +87,7 @@ class FilterContainer(object):
                    for class_name, group in groupby(self._filters, keyfunc)]
         filtr = reduce(self.combine, filters)
         return filtr(queryset)
-        
+
 
 '''
 A generic function to create filters from `MethodFilter` instances.
@@ -116,15 +116,10 @@ def _(filter_class, instance):
 @makefilter.when_object(ValuesDictFilter, PropertyBasedFilter)
 def _(filter_class, instance, *args, **kw):
     method = getattr(instance, instance.method_name)
-    return filter_class(method,  *args, **kw)
+    return filter_class(*args, **kw)(method)
 
 
 @makefilter.when_object(QuerysetIterationHook)
 def _(filter_class, instance):
     method = getattr(instance, instance.method_name)
     return QuerysetIterationHook(method)
-
-
-
-
-
